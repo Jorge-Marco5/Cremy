@@ -132,49 +132,27 @@ def question(args):
                             # Imprimir línea completada
                             if "```" in completed_line:
                                 in_code_block = not in_code_block
+                                # Calculate the number of dashes based on terminal width
+                                num_dashes = terminal_width - len(f'{Fore.CYAN} ───|{Style.BRIGHT}{code_language}|') - 1
                                 if in_code_block:
                                     lang = completed_line.replace("```", "").strip()
-                                    code_language = lang if lang else "python"
-                                    print(f'{Fore.CYAN} ─── [{code_language}] ──────────────────────────────────────────')
+                                    code_language = lang if lang else "sh"
+                                    print(f'{Fore.CYAN} ───|{Style.BRIGHT}{code_language}|{"─" * num_dashes}')
                                 else:
                                     print(f"{Fore.CYAN} ────────────────────────────────────────────────────────────────")
                             elif in_code_block:
                                 sys.stdout.write("")
                                 sys.stdout.flush()
                                 try:
-                                    syntax = Syntax(completed_line, lexer=code_language, theme="monokai", word_wrap=True)
+                                    syntax = Syntax(completed_line, lexer=code_language, theme="github-dark", word_wrap=True)
                                 except Exception:
-                                    syntax = Syntax(completed_line, lexer="text", theme="monokai", word_wrap=True)
+                                    syntax = Syntax(completed_line, lexer="text", theme="github-dark", word_wrap=True)
                                 console.print(syntax)
                             else:
                                 if completed_line.strip():
                                     console.print(Markdown(completed_line))
                                 else:
                                     console.print()
-                            
-                            # 2. Procesar las líneas intermedias si hubiera
-                            for mid_line in parts[1:-1]:
-                                if "```" in mid_line:
-                                    in_code_block = not in_code_block
-                                    if in_code_block:
-                                        lang = mid_line.replace("```", "").strip()
-                                        code_language = lang if lang else "sh"
-                                        print(f'{Fore.CYAN} ─── [{code_language}] ──────────────────────────────────────────')
-                                    else:
-                                        print(f"{Fore.CYAN} ────────────────────────────────────────────────────────────────")
-                                elif in_code_block:
-                                    sys.stdout.write("")
-                                    sys.stdout.flush()
-                                    try:
-                                        syntax = Syntax(mid_line, lexer=code_language, theme="monokai", word_wrap=True)
-                                    except Exception:
-                                        syntax = Syntax(mid_line, lexer="text", theme="monokai", word_wrap=True)
-                                    console.print(syntax)
-                                else:
-                                    if mid_line.strip():
-                                        console.print(Markdown(mid_line))
-                                    else:
-                                        console.print()
                             
                             # 3. La última parte se convierte en la nueva línea activa
                             current_line = parts[-1]
@@ -228,7 +206,7 @@ def question(args):
         if tokens > 0:
             print(f"{Fore.GREEN}{Style.BRIGHT}\nTokens: {Style.RESET_ALL}{tokens}")
         if duration > 0:
-            print(f'{Fore.GREEN}{Style.BRIGHT}Duracion: {Style.RESET_ALL}{duration / 1_000_000_000:.2f}s') # Convert nanoseconds to seconds
+            print(f'{Fore.GREEN}{Style.BRIGHT}Duracion: {Style.RESET_ALL}{format_duration(duration)}') # Convert nanoseconds to seconds
         save_usage(model, tokens, duration)
         return 0
     except Exception as e:
@@ -315,9 +293,11 @@ def show_usage(args):
     if not usage:
         print(f"{Fore.YELLOW}{Style.BRIGHT}No hay estadísticas de uso disponibles.")
         return
-    
     if not args.model:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}ngresa el nombre de un modelo")
+        for model, data in usage.items():
+            print(f"{Fore.GREEN}{Style.BRIGHT}\n• {model}:")
+            print(f"{Fore.CYAN}     Tokens totales: {Style.RESET_ALL}{data['tokens']}")
+            print(f"{Fore.CYAN}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(data['duration'])}")
         return
 
     if args.model not in usage:
@@ -365,36 +345,41 @@ def format_duration(nanoseconds):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Herramienta CLI para usar modelos de IA locales Ollama con salida formato MD")
-    subparsers = parser.add_subparsers(title="Funciones", dest="comando", help="Subcomandos disponibles")
+    try:
+        parser = argparse.ArgumentParser(description="Herramienta CLI para usar modelos de IA locales Ollama con salida formato MD")
+        subparsers = parser.add_subparsers(title="Funciones", dest="comando", help="Subcomandos disponibles")
 
-    parser_question = subparsers.add_parser("req", help="Realizar consulta a un modelo de IA local")
-    parser_question.add_argument("-t", "--text", help="Agrega tu pregunta")
-    parser_question.add_argument("-m", "--model", help="Nombre del modelo", nargs='?')
-    parser_question.set_defaults(func=question)
+        parser_question = subparsers.add_parser("req", help="Realizar consulta a un modelo de IA local")
+        parser_question.add_argument("-t", "--text", help="Agrega tu pregunta")
+        parser_question.add_argument("-m", "--model", help="Nombre del modelo", nargs='?')
+        parser_question.set_defaults(func=question)
 
-    parser_show_models = subparsers.add_parser("models", help="Mostrar modelos disponibles")
-    parser_show_models.set_defaults(func=show_models)
+        parser_show_models = subparsers.add_parser("models", help="Mostrar modelos disponibles")
+        parser_show_models.set_defaults(func=show_models)
 
-    parser_default_model = subparsers.add_parser("change_model", help="Cambiar el modelo por defecto")
-    parser_default_model.add_argument("-m", "--model", help="Nombre del modelo")
-    parser_default_model.set_defaults(func=change_models)
+        parser_default_model = subparsers.add_parser("change_model", help="Cambiar el modelo por defecto")
+        parser_default_model.add_argument("-m", "--model", help="Nombre del modelo")
+        parser_default_model.set_defaults(func=change_models)
 
-    parse_change_server = subparsers.add_parser("change_server", help="Cambiar la direccion del servidor")
-    parse_change_server.add_argument("-u", "--url", help="Url del servidor")
-    parse_change_server.set_defaults(func=change_server)
+        parse_change_server = subparsers.add_parser("change_server", help="Cambiar la direccion del servidor")
+        parse_change_server.add_argument("-u", "--url", help="Url del servidor")
+        parse_change_server.set_defaults(func=change_server)
 
-    parser_show_usage = subparsers.add_parser("metrics", help="Mostrar estadísticas de uso")
-    parser_show_usage.add_argument("-m", "--model", help="Nombre del modelo")
-    parser_show_usage.set_defaults(func=show_usage)
+        parser_show_usage = subparsers.add_parser("metrics", help="Mostrar estadísticas de uso")
+        parser_show_usage.add_argument("-m", "--model", help="Nombre del modelo")
+        parser_show_usage.set_defaults(func=show_usage)
 
-    args = parser.parse_args()
+        args = parser.parse_args()
 
-    if not hasattr(args, "func"):
-        parser.print_help()
-        sys.exit(1)
+        if not hasattr(args, "func"):
+            parser.print_help()
+            sys.exit(1)
 
-    sys.exit(args.func(args))
+        sys.exit(args.func(args))
+    except KeyboardInterrupt:
+        print("\nSaliendo...")
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
