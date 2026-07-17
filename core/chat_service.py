@@ -42,3 +42,5 @@ def send_chat_request(args, user_input=None):
     if exit_code == 0 and response_content:
         context.append({"role": "assistant", "content": response_content})
     return exit_code
+
+

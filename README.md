@@ -62,7 +62,9 @@ pip install -r requirements.txt
   python main.py change_model -m qwen3.5:9b
   ```
 
-- ### Realizar preguntas al modelo
+- ### Realizar una pregunta rapida al modelo
+
+  Realizar una pregunta rapida al modelo de ia y te retorna una respuesta sin tener una conversacion o guardar contexto
 
   ```
   python main.py req -t 'tu pregunta'
@@ -70,7 +72,7 @@ pip install -r requirements.txt
   python main.py req -t '¿Por que el cielo es azul?'
   ```
 
-- ### Realizar preguntas a un modelo especifico
+  **Incluir un modelo en especifico**
 
   Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor
 
@@ -78,6 +80,26 @@ pip install -r requirements.txt
   python main.py req -t 'tu pregunta' -m <tu-otro-modelo>
   # Ejemplo
   python main.py req -t '¿Por que el cielo es azul?' -m <gemma4:12b>
+  ```
+
+  - ### Iniciar una conversacion con un modelo de IA
+
+  Inicia una conversacion con un modelo de IA de forma persistente en memoria en el cual el modelo puede trabajar en base a el contexto de la conversacion
+
+  ```
+  python main.py chat -t 'tu pregunta'
+  # Ejemplo
+  python main.py chat -t '¿Por que el cielo es azul?'
+  ```
+
+  **Incluir un modelo en especifico**
+
+  Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor, de momento no puedes cambiar el modelo durante la conversacion, solo al iniciar una nueva
+
+  ```
+  python main.py chat -t 'tu pregunta' -m <tu-otro-modelo>
+  # Ejemplo
+  python main.py chat -t '¿Por que el cielo es azul?' -m <gemma4:12b>
   ```
 
 - ### Ver metricas de uso

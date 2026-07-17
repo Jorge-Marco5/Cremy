@@ -45,3 +45,4 @@ def clear_active_line(text: str, width: int):
         sys.stdout.write(f"\033[{num_rows - 1}A")
     sys.stdout.write("\r\033[J")
     sys.stdout.flush()
+
