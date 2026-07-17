@@ -11,7 +11,7 @@ def send_chat_request(args, user_input=None):
     url_base = get_config("url")
     stream = get_config("stream")
     model = args.model if args.model else get_config("model")
-
+    
     # Determina el contenido del mensaje
     if user_input:
         content = user_input
