@@ -8,12 +8,10 @@ import sys
 import os
 from halo import Halo
 from colorama import init, Fore, Style
-# Import helpers and time formatter from utils to avoid circular imports
 from utils.helpers import get_config, write_config
 from utils.format_time import format_duration
 from core.chat_service import send_chat_request
 
-# Inicializar colorama
 init(autoreset=True)
 
 
@@ -25,7 +23,6 @@ def instant_req(args):
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
 
-    # Para 'req', el contexto no se mantiene entre ejecuciones
     return send_chat_request(args)
 
 
@@ -37,10 +34,8 @@ def chat(args):
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
 
-    # Enviar el primer mensaje para iniciar el chat
     exit_code = send_chat_request(args)
 
-    # Bucle para continuar el chat si la primera pregunta fue exitosa
     while exit_code == 0:
             req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
             if not req.strip():
@@ -75,7 +70,6 @@ def show_models(args):
                     model_name = model.get('name')
                     print(f"{Fore.CYAN}  • {model_name}{Style.RESET_ALL}")
                     models_dict[model_name] = model_name
-                # Escribimos a la configuración una sola vez, fuera del bucle
                 write_config("models", models_dict)
             else:
                 print(f"{Fore.YELLOW}{Style.BRIGHT}No se encontraron modelos.{Style.RESET_ALL}")
@@ -113,7 +107,6 @@ def change_models(args):
     return 0
 
 def save_usage(model, tokens, duration):
-    # moved to utils/helpers.py; kept wrapper for backward compatibility
     from utils.helpers import save_usage as _save
     return _save(model, tokens, duration)
 

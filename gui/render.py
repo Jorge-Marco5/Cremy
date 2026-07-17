@@ -8,7 +8,6 @@ import sys
 import os
 from halo import Halo
 from colorama import init, Fore, Style
-# Import helpers and time formatter from utils to avoid circular imports
 from utils.helpers import clear_active_line, save_usage
 from utils.format_time import format_duration
 
@@ -24,8 +23,8 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
         spinner = Halo(text=f'{Fore.CYAN}Pensando...{Style.RESET_ALL}', spinner='dots')
         print(f"{Fore.MAGENTA}{Style.BRIGHT}\nModel: {model}{Style.RESET_ALL}")
         console = Console(force_terminal=True)
-        tokens = 0 # Initialize tokens count
-        duration = 0 # Initialize duration in nanoseconds
+        tokens = 0
+        duration = 0
         spinner.start()
         try:
             with urllib.request.urlopen(req) as response:
@@ -51,30 +50,25 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
                         except json.JSONDecodeError:
                             continue
                         
-                        # Extract tokens and duration from the final chunk if 'done' is true
                         if res.get("done"):
                             tokens = res.get("eval_count", 0)
                             duration = res.get("eval_duration", 0)
                             
                         content = res.get("message", {}).get("content", "")
                         if not content:
-                            # Si es el final, guardamos el contenido completo
                             if res.get("done"):
                                 full_response_content = current_line
                             continue
                             
-                        # Procesar el streaming de forma estrictamente línea por línea
                         if "\n" in content:
                             parts = content.split("\n")
                             
-                            # 1. Procesar la parte completada de la línea activa actual
                             completed_line = current_line + parts[0]
                             if in_code_block:
                                 clear_active_line("" + current_line, terminal_width)
                             else:
                                 clear_active_line(current_line, terminal_width)
                             
-                            # Imprimir línea completada
                             if "```" in completed_line:
                                 in_code_block = not in_code_block
                                 num_dashes = terminal_width - len(f'{Fore.CYAN}────┤{Style.BRIGHT}{code_language}├')
@@ -99,7 +93,7 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
                                 else:
                                     console.print()
                             
-                            # 3. La última parte se convierte en la nueva línea activa
+                            
                             current_line = parts[-1]
                             if current_line:
                                 if in_code_block:
@@ -108,7 +102,7 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
                                     sys.stdout.write(current_line)
                                 sys.stdout.flush()
                         else:
-                            # Limpiar la línea activa previa e imprimir el estado actualizado
+                            
                             if in_code_block:
                                 clear_active_line("" + current_line, terminal_width)
                                 current_line += content
@@ -119,7 +113,7 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
                                 sys.stdout.write(current_line)
                             sys.stdout.flush()
                             
-                    # Limpiar y vaciar cualquier texto remanente al final
+                    
                     if current_line:
                         if in_code_block:
                             clear_active_line("" + current_line, terminal_width)
@@ -136,12 +130,12 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
                             console.print(Markdown(current_line, code_theme="github-dark"))
                         full_response_content = current_line
                 else:
-                    # Si stream es False
+                    
                     response_body = response.read().decode("utf-8")
                     res = json.loads(response_body)
                     content = res.get("message", {}).get("content", "")
                     
-                    # Extract tokens and duration for non-streaming response
+                    
                     tokens = res.get("eval_count", 0)
                     duration = res.get("eval_duration", 0)
                     full_response_content = content
@@ -149,11 +143,11 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
         finally:
             spinner.stop()
 
-        # Display tokens and duration if available
+        
         if tokens > 0:
             print(f"{Fore.GREEN}{Style.BRIGHT}\nTokens: {Style.RESET_ALL}{tokens}")
         if duration > 0:
-            print(f'{Fore.GREEN}{Style.BRIGHT}Duracion: {Style.RESET_ALL}{format_duration(duration)}') # Convert nanoseconds to seconds
+            print(f'{Fore.GREEN}{Style.BRIGHT}Duracion: {Style.RESET_ALL}{format_duration(duration)}') 
         save_usage(model, tokens, duration)
         return full_response_content, 0
     except Exception as e:
