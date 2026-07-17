@@ -10,8 +10,13 @@ def send_chat_request(args, user_input=None):
     """Realiza una peticion '/api/chat' a la API de Ollama."""
     url_base = get_config("url")
     stream = get_config("stream")
-    model = args.model if args.model else get_config("model")
-    
+    models = get_config("models")
+    model = args.model if args.model else get_config("model") # Obtener el modelo de los args o de la configuración
+
+    if models and model not in models:
+        print(f"Error: El modelo '{model}' no está disponible. Usa 'models' para ver los modelos disponibles.")
+        return 1
+
     # Determina el contenido del mensaje
     if user_input:
         content = user_input
@@ -42,5 +47,3 @@ def send_chat_request(args, user_input=None):
     if exit_code == 0 and response_content:
         context.append({"role": "assistant", "content": response_content})
     return exit_code
-
-

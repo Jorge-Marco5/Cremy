@@ -21,18 +21,8 @@ def instant_req(args):
     """
     Realizar una pregunta rapida a Ollama
     """
-    models = get_config("models")
-    if not models:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No tienes modelos guardados en la configuración. Consulta con 'models' primero.{Style.RESET_ALL}")
-        return 1
-    
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
-        return 1
-
-    if args.model not in models:
-        show_models(args)
-        print(f"{Fore.RED}{Style.BRIGHT}\nModelo '{args.model}' no encontrado, verifica el nombre.{Style.RESET_ALL}")
         return 1
 
     # Para 'req', el contexto no se mantiene entre ejecuciones
@@ -43,19 +33,8 @@ def chat(args):
     """
     Iniciar una conversacion con un modelo de IA local usando Ollama
     """
-    models = get_config("models")
-
-    if not models:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No tienes modelos guardados en la configuración. Consulta con 'models' primero.{Style.RESET_ALL}")
-        return 1
-
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
-        return 1
-
-    if args.model not in models:
-        show_models(args)
-        print(f"{Fore.RED}{Style.BRIGHT}\nModelo '{args.model}' no encontrado, verifica el nombre.{Style.RESET_ALL}")
         return 1
 
     # Enviar el primer mensaje para iniciar el chat
