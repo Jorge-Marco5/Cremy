@@ -52,9 +52,9 @@ pip install -r requirements.txt
   python main.py models
   ```
 
-- ### Cambiar tu modelo de IA
+- ### Cambiar modelo de IA por defecto
 
-  Cambia el modelo de IA a uno que tengas instalado en la plataforma de ollama dentro de tu servidor
+  Cambia el modelo de IA por defecto a uno que tengas instalado en la plataforma de ollama dentro de tu servidor
 
   ```
   python main.py change_model -m <tu-modelo>
@@ -82,9 +82,9 @@ pip install -r requirements.txt
   python main.py req -t '¿Por que el cielo es azul?' -m <gemma4:12b>
   ```
 
-  - ### Iniciar una conversacion con un modelo de IA
+- ### Iniciar una conversacion con un modelo de IA
 
-  Inicia una conversacion con un modelo de IA de forma persistente en memoria en el cual el modelo puede trabajar en base a el contexto de la conversacion
+  Inicia una conversacion con un modelo de IA de forma persistente en el sistema en el cual el modelo puede trabajar en base a el contexto de la conversacion
 
   ```
   python main.py chat -t 'tu pregunta'
@@ -94,7 +94,8 @@ pip install -r requirements.txt
 
   **Incluir un modelo en especifico**
 
-  Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor, de momento no puedes cambiar el modelo durante la conversacion, solo al iniciar una nueva
+  Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor
+  - solo puedes cambiar el modelo saliendo del chat e ingresando nuevamente seleccionando la conversacion en la que estabas trabajando
 
   ```
   python main.py chat -t 'tu pregunta' -m <tu-otro-modelo>
@@ -102,9 +103,52 @@ pip install -r requirements.txt
   python main.py chat -t '¿Por que el cielo es azul?' -m <gemma4:12b>
   ```
 
+- ### Seleccionar una conversacion
+
+  Selecciona una conversacion anterior guardada en el sistema
+  - las conversaciones se guardan iniciando una solicitud como _chat_, no como _req_
+
+  ```
+  python main.py continue_chat
+
+  Seleccione una conversación
+  > 223752fb-b75f-481f-ad8e-a79c848a550c - crea un hola mundo en python
+  ```
+
+  **Incluir un modelo en especifico**
+
+  Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor
+
+  ```
+  python main.py continue_chat -m <tu-otro-modelo>
+  # Ejemplo
+  python main.py continue_chat -m <gemma4:12b>
+  ```
+
+- ### Eliminar una conversacion
+
+  Selecciona una conversacion guardada para eliminarla completamente
+
+  ```
+  python main.py delete_chat
+
+  Seleccione una conversación
+  > 223752fb-b75f-481f-ad8e-a79c848a550c - crea un hola mundo en python
+  ```
+
+- ### Agregar system prompt personalizado
+
+  Cambia el system prompt del modelo de IA por defecto a uno personalizado que se ajuste a tus necesidadesde trabajo
+
+  ```
+  python main.py system_prompt -t <tu-system-prompt>
+  # Ejemplo
+  python main.py system_prompt -t 'Actua como un ingeniero de software util, experto en programación '
+  ```
+
 - ### Ver metricas de uso
 
-  Puedes ver estadisticas generales de uso como tokens y tiempo general de uso
+  Puedes ver estadisticas generales de uso como tokens y tiempo general de uso ordenados de forma descendente en base a el mayor consumo de tokens
 
   ```
   python main.py metrics -m <tu-modelo>
