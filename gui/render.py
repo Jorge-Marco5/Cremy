@@ -17,14 +17,14 @@ dataService = DataService()
 # Inicializar colorama
 init(autoreset=True)
 
-def render_response(model: str, req: urllib.request.Request, stream: bool):
+def render_response(agent: str, req: urllib.request.Request, stream: bool):
     """
-    Metodo para renderizar la respuesta en la terminal
+    Metodo para renderizar la respuesta del modelo en la terminal
     """
     full_response_content = ""
     try:
         spinner = Halo(text=f'{Fore.CYAN}Pensando...{Style.RESET_ALL}', spinner='dots')
-        print(f"{Fore.MAGENTA}{Style.BRIGHT}\nModel: {model}{Style.RESET_ALL}")
+        print(f"{Fore.MAGENTA}{Style.BRIGHT}\nModel: {agent}{Style.RESET_ALL}")
         console = Console(force_terminal=True)
         tokens = 0
         duration = 0
@@ -149,12 +149,22 @@ def render_response(model: str, req: urllib.request.Request, stream: bool):
             print(f"{Fore.GREEN}{Style.BRIGHT}\nTokens: {Style.RESET_ALL}{tokens}")
         if duration > 0:
             print(f'{Fore.GREEN}{Style.BRIGHT}Duracion: {Style.RESET_ALL}{format_duration(duration)}') 
-        save_usage(model, tokens, duration)
+        save_usage(agent, tokens, duration)
         return full_response_content, 0
     except Exception as e:
         print(f"{Fore.RED}{Style.BRIGHT}Error de conexión: {e}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Asegúrate de que Ollama está corriendo con el comando:{Style.RESET_ALL} {Fore.CYAN}ollama serve{Style.RESET_ALL}")
         return None, 1
+
+def render_message(agent: str, content: str):
+    """
+    Metodo para renderizar un mensaje en la terminal
+    """
+    console = Console(force_terminal=True)
+    print(f"{Fore.RED}{Style.BRIGHT}\n{agent}{Style.RESET_ALL}")
+    #text = str(content)
+    console.print(Markdown(content))
+    return 0
 
 def render_conversation(uuid: str):
     """

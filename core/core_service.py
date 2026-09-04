@@ -11,6 +11,7 @@ from colorama import init, Fore, Style
 from utils.helpers import get_config, write_config
 from utils.format_time import format_duration
 from core.chat_service import send_chat_request, clear_context, context
+from gui.render import render_message
 from persistent.db import DataService
 from gui.render import render_conversation
 from simple_term_menu import TerminalMenu
@@ -55,10 +56,10 @@ def chat(args):
             req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
             if not req.strip():
                 continue
-            if req == "exit":
+            if req == 'exit':
+                render_message("System", "**Saliendo...**")
                 break
             exit_code = send_chat_request(args, user_input=req)
-
     return 0
 
 def continue_chat(args):
@@ -88,6 +89,7 @@ def continue_chat(args):
             if not req.strip():
                 continue
             if req == "exit":
+                render_message("System", "**Saliendo...**")
                 break
             exit_code = send_chat_request(args, user_input=req) # args ya tiene el uuid
 
@@ -216,11 +218,15 @@ def save_usage(model, tokens, duration):
     return _save(model, tokens, duration)
 
 def show_usage(args):
+    spinner = Halo(text=f'{Fore.CYAN}Obteniendo modelos...{Style.RESET_ALL}', spinner='dots')
+    spinner.start()
     usage = get_config("usage")
     if not usage:
+        spinner.stop()
         print(f"{Fore.YELLOW}{Style.BRIGHT}No hay estadísticas de uso disponibles.")
         return
     if not args.model:
+        spinner.stop()
         usage = dict(sorted(usage.items(), key=lambda item: item[1]['tokens'], reverse=True))
         for model, data in usage.items():
             print(f"{Fore.GREEN}{Style.BRIGHT}\n• {model}:")
@@ -229,27 +235,35 @@ def show_usage(args):
         return
 
     if args.model not in usage:
+        spinner.stop()
         print(f"{Fore.YELLOW}{Style.BRIGHT}No hay estadísticas de uso para el modelo '{args.model}'.")
         return
-    
+    spinner.stop()
     print(f"{Fore.GREEN}{Style.BRIGHT}\n• {args.model}:")
     print(f"{Fore.CYAN}     Tokens totales: {Style.RESET_ALL}{usage[args.model]['tokens']}")
     print(f"{Fore.CYAN}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(usage[args.model]['duration'])}")
     print("\n")
 
 def change_server(args):
-    if not args.url:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa la URL del servidor.{Style.RESET_ALL}")
-        return 1
+    try:
+        if not args.url:
+            print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa la URL del servidor.{Style.RESET_ALL}")
+            return 1
 
-    write_config("url", args.url)
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nURL del servidor cambiada exitosamente a: {get_config('url')}{Style.RESET_ALL}")
-    return 0
+        write_config("url", args.url)
+        print(f"{Fore.GREEN}{Style.BRIGHT}\nURL del servidor cambiada exitosamente a: {get_config('url')}{Style.RESET_ALL}")
+        return 0
+    except Exception as e:
+        print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar la URL del servidor: {e}{Style.RESET_ALL}")
 
 def system_prompt(args):
-    if not args.text:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa el system prompt.{Style.RESET_ALL}")
+    try:
+        if not args.text:
+            print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa el system prompt.{Style.RESET_ALL}")
+            return 1
+        write_config("system_prompt", args.text)
+        print(f"{Fore.GREEN}{Style.BRIGHT}\nSystem prompt cambiado exitosamente.{Style.RESET_ALL}")
+        return 0
+    except Exception as e:
+        print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar el system prompt: {e}{Style.RESET_ALL}")
         return 1
-    write_config("system_prompt", args.text)
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nSystem prompt cambiado exitosamente.{Style.RESET_ALL}")
-    return 0
