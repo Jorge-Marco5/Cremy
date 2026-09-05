@@ -184,3 +184,26 @@ pip install -r requirements.txt
   python main.py req -t 'Explica la teoría de la relatividad' --temperature 0.3 --num-ctx 4096
   python main.py chat -t 'Hola' --temperature 0.9
   ```
+
+- ### Soporte de Modelos Multimodales (Imágenes y Visión)
+
+  Puedes interactuar con modelos de visión de Ollama (ej. `llama3.2-vision`, `minicpm-v`, `llava`, `qwen2-vl`) enviando imágenes locales (`.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`):
+
+  **Consulta rápida con imagen (`req`):**
+  ```bash
+  python main.py req -t "¿Qué texto hay en esta captura?" -i captura.png -m llama3.2-vision
+  # O varias imágenes:
+  python main.py req -t "Compara estas dos imágenes" -i imagen1.png imagen2.jpg -m minicpm-v
+  ```
+
+  **Iniciar un chat interactivo con imagen inicial (`chat`):**
+  ```bash
+  python main.py chat -t "Explica la arquitectura mostrada en este diagrama" -i diagrama.png -m llama3.2-vision
+  ```
+
+  **Adjuntar imágenes en tiempo real dentro del chat interactivo:**
+  Durante una conversación activa, puedes adjuntar nuevas imágenes usando el comando `/image` o `/img`:
+  ```text
+  Usuario: /image /ruta/a/error.png ¿Cómo resuelvo este error que aparece en pantalla?
+  Usuario: /img esquema.jpg ¿Qué componentes faltan aquí?
+  ```

@@ -8,7 +8,7 @@ import sys
 import os
 from halo import Halo
 from colorama import init, Fore, Style
-from utils.helpers import get_config, write_config, parse_option_value
+from utils.helpers import get_config, write_config, parse_option_value, parse_interactive_image_input, encode_image
 from utils.format_time import format_duration
 from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
@@ -60,7 +60,11 @@ def chat(args):
         if req == 'exit':
             render_message("System", "**Saliendo...**")
             break
-        exit_code = send_chat_request(args, user_input=req)
+        prompt, attached_images = parse_interactive_image_input(req)
+        if attached_images:
+            exit_code = send_chat_request(args, user_input=prompt, images=attached_images)
+        else:
+            exit_code = send_chat_request(args, user_input=req)
     return 0
 
 def continue_chat(args):
@@ -80,7 +84,22 @@ def continue_chat(args):
     messages = dataservice.show_messages(str(uuid))
     if messages:
         for message in messages:
-            context.append({"role": message[1], "content": message[2]})
+            msg_obj = {"role": message[1], "content": message[2]}
+            if len(message) > 4 and message[4]:
+                try:
+                    img_list = json.loads(message[4]) if isinstance(message[4], str) else message[4]
+                    if img_list:
+                        b64_list = []
+                        for p in img_list:
+                            try:
+                                b64_list.append(encode_image(p))
+                            except Exception:
+                                pass
+                        if b64_list:
+                            msg_obj["images"] = b64_list
+                except Exception:
+                    pass
+            context.append(msg_obj)
 
     render_conversation(str(uuid))
     exit_code = 0
@@ -92,7 +111,11 @@ def continue_chat(args):
         if req == "exit":
             render_message("System", "**Saliendo...**")
             break
-        exit_code = send_chat_request(args, user_input=req) # args ya tiene el uuid
+        prompt, attached_images = parse_interactive_image_input(req)
+        if attached_images:
+            exit_code = send_chat_request(args, user_input=prompt, images=attached_images)
+        else:
+            exit_code = send_chat_request(args, user_input=req) # args ya tiene el uuid
 
     return 0
 

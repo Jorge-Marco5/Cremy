@@ -88,3 +88,50 @@ def parse_option_value(value: str):
     except Exception:
         pass
     return value.strip()
+
+SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
+
+def encode_image(image_path: str) -> str:
+    """Valida y codifica un archivo de imagen en Base64 para la API de Ollama."""
+    import base64
+    path = Path(image_path).expanduser().resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"No se encontró el archivo de imagen: '{image_path}'")
+    if path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+        exts = ", ".join(sorted(SUPPORTED_IMAGE_EXTENSIONS))
+        raise ValueError(f"Extensión no soportada '{path.suffix}'. Formatos soportados: {exts}")
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+def parse_interactive_image_input(user_input: str) -> tuple:
+    """
+    Detecta comandos interactivos como:
+    /image /ruta/a/imagen.png Pregunta sobre la imagen
+    /img "ruta con espacios.jpg" Otra pregunta
+    Retorna (texto_pregunta, lista_de_rutas_imagenes).
+    """
+    stripped = user_input.strip()
+    if not (stripped.startswith("/image") or stripped.startswith("/img")):
+        return user_input, []
+
+    parts = stripped.split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        return "", []
+
+    rest = parts[1].strip()
+    import shlex
+    try:
+        tokens = shlex.split(rest)
+    except ValueError:
+        tokens = rest.split()
+
+    if not tokens:
+        return "", []
+
+    img_path = tokens[0]
+    if len(tokens) > 1:
+        prompt = " ".join(tokens[1:])
+    else:
+        prompt = "¿Puedes describir y analizar esta imagen en detalle?"
+
+    return prompt, [img_path]

@@ -15,7 +15,7 @@ def clear_context():
     """Limpia el historial del chat en memoria."""
     context.clear()
 
-def send_chat_request(args, user_input=None):
+def send_chat_request(args, user_input=None, images=None):
     try:
         """Realiza una peticion '/api/chat' a la API de Ollama."""
         url_base = get_config("url")
@@ -37,13 +37,37 @@ def send_chat_request(args, user_input=None):
             clear_context()
             return 1 # No hay texto para enviar
 
+        # Determina las imágenes adjuntas si fueron pasadas
+        image_paths = []
+        if images:
+            image_paths = [images] if isinstance(images, str) else list(images)
+        elif not user_input and getattr(args, 'image', None):
+            raw_img = args.image
+            image_paths = [raw_img] if isinstance(raw_img, str) else list(raw_img)
+
+        b64_images = []
+        if image_paths:
+            from utils.helpers import encode_image
+            try:
+                for img_p in image_paths:
+                    b64_images.append(encode_image(img_p))
+                print(f"{Fore.CYAN}🖼️  [Imagen adjunta: {', '.join(image_paths)}]{Style.RESET_ALL}")
+            except Exception as img_err:
+                print(f"\n{Fore.RED}{Style.BRIGHT}Error al procesar imagen: {img_err}{Style.RESET_ALL}")
+                return 1
+
         # Añade el mensaje del usuario al contexto y a la BD si aplica
-        context.append({"role": "user", "content": content})
+        user_message = {"role": "user", "content": content}
+        if b64_images:
+            user_message["images"] = b64_images
+        context.append(user_message)
+
         if args.uuid:
             dataServices.insert_message({
                 "conversation_uuid": args.uuid,
                 "role": "user",
-                "content": content
+                "content": content,
+                "images": image_paths if image_paths else None
             })
 
         url = f"{url_base}/api/chat"

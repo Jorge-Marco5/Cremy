@@ -181,6 +181,14 @@ def render_conversation(uuid: str):
             role = message[1]
             if role == "user":
                 print(f"{Fore.YELLOW}{Style.BRIGHT}\nUsuario:{Style.RESET_ALL}")
+                if len(message) > 4 and message[4]:
+                    try:
+                        raw_imgs = json.loads(message[4]) if isinstance(message[4], str) else message[4]
+                        if raw_imgs:
+                            img_str = ", ".join(raw_imgs) if isinstance(raw_imgs, list) else str(raw_imgs)
+                            print(f"{Fore.CYAN}🖼️  [Imagen adjunta: {img_str}]{Style.RESET_ALL}")
+                    except Exception:
+                        pass
             else:
                 print(f"{Fore.MAGENTA}{Style.BRIGHT}\nAsistente:{Style.RESET_ALL}")
             console = Console(force_terminal=True)

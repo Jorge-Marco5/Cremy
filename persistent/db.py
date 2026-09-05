@@ -33,11 +33,16 @@ class DataService:
                 conversation_uuid TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
+                images TEXT DEFAULT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (conversation_uuid) REFERENCES Conversations (uuid)
+                FOREIGN KEY (conversation_uuid) REFERENCES conversations (uuid)
             );
             """
         )
+        try:
+            cursor.execute("ALTER TABLE messages ADD COLUMN images TEXT DEFAULT NULL;")
+        except sqlite3.OperationalError:
+            pass
 
         self.conn.commit()
 
@@ -76,7 +81,7 @@ class DataService:
 
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT id, role, content, created_at FROM messages WHERE conversation_uuid = ? ORDER BY created_at ASC LIMIT ?",
+            "SELECT id, role, content, created_at, images FROM messages WHERE conversation_uuid = ? ORDER BY created_at ASC LIMIT ?",
             (str(uuid), int(limit))
         )
         return cursor.fetchall()
@@ -84,14 +89,20 @@ class DataService:
     def insert_message(self, data: dict):
         """Guarda un nuevo mensaje de una conversacion."""
         cursor = self.conn.cursor()
+        images_val = data.get("images")
+        if isinstance(images_val, list):
+            import json
+            images_val = json.dumps(images_val)
+
         cursor.execute("""
             INSERT INTO messages (
-                conversation_uuid, role, content
-            ) VALUES (?, ?, ?)
+                conversation_uuid, role, content, images
+            ) VALUES (?, ?, ?, ?)
         """, (
             data["conversation_uuid"],
             data["role"],
             data["content"],
+            images_val,
         ))
 
         self.conn.commit()
