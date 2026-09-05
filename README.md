@@ -155,3 +155,32 @@ pip install -r requirements.txt
   # Ejemplo
   python main.py metrics -m <qwen3.5:9b>
   ```
+
+- ### Configurar y personalizar opciones del modelo (Ollama Options)
+
+  Puedes personalizar parámetros de inferencia de Ollama (temperatura, ventana de contexto, muestreo, etc.) de forma persistente o mediante flags por petición:
+
+  **Ver opciones configuradas y parámetros soportados:**
+  ```
+  python main.py options
+  ```
+
+  **Configurar una opción persistente:**
+  ```
+  python main.py set_option -k <clave> -v <valor>
+  # Ejemplos:
+  python main.py set_option -k temperature -v 0.2
+  python main.py set_option -k num_ctx -v 8192
+  python main.py set_option -k top_p -v 0.9
+  ```
+
+  **Restablecer opciones a los valores por defecto:**
+  ```
+  python main.py reset_options
+  ```
+
+  **Sobreescribir opciones en una consulta específica (`req` o `chat`):**
+  ```
+  python main.py req -t 'Explica la teoría de la relatividad' --temperature 0.3 --num-ctx 4096
+  python main.py chat -t 'Hola' --temperature 0.9
+  ```

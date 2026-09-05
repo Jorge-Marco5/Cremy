@@ -8,7 +8,7 @@ import sys
 import os
 from halo import Halo
 from colorama import init, Fore, Style
-from utils.helpers import get_config, write_config
+from utils.helpers import get_config, write_config, parse_option_value
 from utils.format_time import format_duration
 from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
@@ -268,3 +268,41 @@ def system_prompt(args):
     except Exception as e:
         print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar el system prompt: {e}{Style.RESET_ALL}")
         return 1
+
+def show_options(args):
+    options = get_config("options") or {}
+    print(f"{Fore.MAGENTA}{Style.BRIGHT}\nParámetros de opciones configurados:{Style.RESET_ALL}")
+    if not options:
+        print(f"{Fore.YELLOW}  (Ninguna opción personalizada configurada. Se usan los valores por defecto del modelo en Ollama){Style.RESET_ALL}")
+    else:
+        for key, val in options.items():
+            print(f"{Fore.CYAN}  • {key}: {Fore.GREEN}{val} {Fore.WHITE}({type(val).__name__}){Style.RESET_ALL}")
+
+    print(f"{Fore.MAGENTA}{Style.BRIGHT}\nOpciones comunes soportadas por Ollama:{Style.RESET_ALL}")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}temperature{Style.RESET_ALL} (float): Creatividad / aleatoriedad (ej. 0.2 factual, 0.7 balanceado, 1.2 creativo)")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}num_ctx{Style.RESET_ALL} (int): Tamaño de ventana de contexto en tokens (ej. 2048, 4096, 8192, 32768)")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}top_p{Style.RESET_ALL} (float): Muestreo por núcleo (ej. 0.9)")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}top_k{Style.RESET_ALL} (int): Limita a los K tokens más probables (ej. 40)")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}num_predict{Style.RESET_ALL} (int): Máximo de tokens a generar (-1 para ilimitado)")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}repeat_penalty{Style.RESET_ALL} (float): Penalización por repetición (ej. 1.1)")
+    print(f"{Fore.WHITE}  • {Fore.CYAN}seed{Style.RESET_ALL} (int): Semilla para reproducibilidad de respuestas")
+    print(f"\n{Fore.YELLOW}Tip: Modifica una opción con {Fore.CYAN}python main.py set_option -k <clave> -v <valor>{Style.RESET_ALL}")
+    return 0
+
+def set_option(args):
+    if not args.key or args.value is None:
+        print(f"{Fore.YELLOW}{Style.BRIGHT}Uso requerido: set_option -k <clave> -v <valor>{Style.RESET_ALL}")
+        return 1
+
+    options = get_config("options") or {}
+    parsed_value = parse_option_value(args.value)
+    options[args.key] = parsed_value
+    write_config("options", options)
+    print(f"{Fore.GREEN}{Style.BRIGHT}\nOpción configurada exitosamente:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}  • {args.key}: {Fore.GREEN}{parsed_value} {Fore.WHITE}({type(parsed_value).__name__}){Style.RESET_ALL}")
+    return 0
+
+def reset_options(args):
+    write_config("options", {})
+    print(f"{Fore.GREEN}{Style.BRIGHT}\nOpciones restablecidas exitosamente. Ahora se usan los valores por defecto de Ollama.{Style.RESET_ALL}")
+    return 0

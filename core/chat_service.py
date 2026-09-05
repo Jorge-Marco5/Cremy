@@ -54,11 +54,23 @@ def send_chat_request(args, user_input=None):
             messages_payload.append({"role": "system", "content": str(sys_prompt)})
         messages_payload.extend(context)
 
+        options = dict(get_config("options") or {})
+        if getattr(args, 'temperature', None) is not None:
+            options['temperature'] = float(args.temperature)
+        if getattr(args, 'num_ctx', None) is not None:
+            options['num_ctx'] = int(args.num_ctx)
+        if getattr(args, 'top_p', None) is not None:
+            options['top_p'] = float(args.top_p)
+        if getattr(args, 'top_k', None) is not None:
+            options['top_k'] = int(args.top_k)
+
         payload = {
             "model": str(model),
             "messages": messages_payload,
             "stream": stream
         }
+        if options:
+            payload["options"] = options
 
         req = urllib.request.Request(
             url,

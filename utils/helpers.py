@@ -60,3 +60,31 @@ def clear_active_line(text: str, width: int):
         sys.stdout.write(f"\033[{num_rows - 1}A")
     sys.stdout.write("\r\033[J")
     sys.stdout.flush()
+
+def parse_option_value(value: str):
+    """Convierte un string de la CLI al tipo adecuado (bool, int, float o str)."""
+    if not isinstance(value, str):
+        return value
+    val_lower = value.strip().lower()
+    if val_lower == "true":
+        return True
+    if val_lower == "false":
+        return False
+    # Intentar como int
+    try:
+        return int(value.strip())
+    except ValueError:
+        pass
+    # Intentar como float
+    try:
+        return float(value.strip())
+    except ValueError:
+        pass
+    # Intentar como JSON (para listas de stop words ej. ["stop1"])
+    try:
+        parsed = json.loads(value.strip())
+        if isinstance(parsed, (list, dict)):
+            return parsed
+    except Exception:
+        pass
+    return value.strip()
