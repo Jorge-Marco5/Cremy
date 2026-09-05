@@ -48,11 +48,16 @@ def send_chat_request(args, user_input=None):
 
         url = f"{url_base}/api/chat"
 
+        sys_prompt = get_config("system_prompt")
+        messages_payload = []
+        if sys_prompt and str(sys_prompt).strip():
+            messages_payload.append({"role": "system", "content": str(sys_prompt)})
+        messages_payload.extend(context)
+
         payload = {
             "model": str(model),
-            "messages": context,
-            "stream": stream,
-            "system_prompt": str(get_config("system_prompt"))
+            "messages": messages_payload,
+            "stream": stream
         }
 
         req = urllib.request.Request(

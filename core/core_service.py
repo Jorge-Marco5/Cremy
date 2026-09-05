@@ -14,6 +14,7 @@ from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
 from persistent.db import DataService
 from gui.render import render_conversation
+# pyrefly: ignore [missing-import]
 from simple_term_menu import TerminalMenu
 
 
@@ -53,13 +54,13 @@ def chat(args):
     exit_code = send_chat_request(args)
 
     while exit_code == 0:
-            req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
-            if not req.strip():
-                continue
-            if req == 'exit':
-                render_message("System", "**Saliendo...**")
-                break
-            exit_code = send_chat_request(args, user_input=req)
+        req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
+        if not req.strip():
+            continue
+        if req == 'exit':
+            render_message("System", "**Saliendo...**")
+            break
+        exit_code = send_chat_request(args, user_input=req)
     return 0
 
 def continue_chat(args):
@@ -85,13 +86,13 @@ def continue_chat(args):
     exit_code = 0
 
     while exit_code == 0:
-            req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
-            if not req.strip():
-                continue
-            if req == "exit":
-                render_message("System", "**Saliendo...**")
-                break
-            exit_code = send_chat_request(args, user_input=req) # args ya tiene el uuid
+        req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
+        if not req.strip():
+            continue
+        if req == "exit":
+            render_message("System", "**Saliendo...**")
+            break
+        exit_code = send_chat_request(args, user_input=req) # args ya tiene el uuid
 
     return 0
 

@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from datetime import datetime
 from uuid import uuid4
-
-file_path = "database.db"
+BASE_DIR = Path(__file__).resolve().parent.parent
+file_path = BASE_DIR / "database.db"
 
 class DataService:
     def __init__(self):
@@ -111,7 +111,7 @@ class DataService:
 
         self.conn.commit()
 
-        item = self.show_one(data['alias'])
+        item = self.show_one(data['uuid'])
         return item
 
     def delete(self, uuid: str):

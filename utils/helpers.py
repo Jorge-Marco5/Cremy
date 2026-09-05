@@ -1,8 +1,11 @@
 import json
 import os
 import sys
+from pathlib import Path
 
-file_path = "config.json"
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_FILE = BASE_DIR / "config.json"
+file_path = str(CONFIG_FILE)
 
 
 def read_config():

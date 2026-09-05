@@ -3,8 +3,7 @@ import json
 import sys
 import os
 from core.core_service import instant_req, chat, continue_chat, delete_chat, show_models, change_models, change_server, system_prompt, show_usage
-
-file_path = "config.json"
+from utils.helpers import file_path
 
 default_data = {
     "url": "http://localhost:11434",
