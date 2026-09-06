@@ -146,6 +146,14 @@ pip install -r requirements.txt
   python main.py system_prompt -t 'Actua como un ingeniero de software util, experto en programación '
   ```
 
+- ### Activar/Desactivar modo razonamiento
+
+  Activa o desactiva el modo razonamiento del modelo de IA por defecto
+
+  ```
+  python main.py think
+  ```
+
 - ### Ver metricas de uso
 
   Puedes ver estadisticas generales de uso como tokens y tiempo general de uso ordenados de forma descendente en base a el mayor consumo de tokens
