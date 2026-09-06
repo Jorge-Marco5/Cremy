@@ -44,9 +44,9 @@ pip install -r requirements.txt
   python main.py change_server -u http://192.168.1.2:11434
   ```
 
-- ### Ver modelos disponibles
+- ### Ver modelos disponibles y sus capacidades
 
-  Para ver la lista de modelos disponibles es necesario tener al menos un modelo de IA instalado de forma local en la plataforma de ollama dentro de tu servidor
+  Muestra una tabla detallada con todos los modelos instalados en tu servidor de Ollama, incluyendo cantidad de parámetros, nivel de cuantización, tamaño en disco, tamaño de ventana de contexto y sus capacidades detectadas (👁️ Visión / Multimodal, 🧠 Razonamiento / Thinking, 🛠️ Tools, 💻 Código, 💬 Texto):
 
   ```
   python main.py models

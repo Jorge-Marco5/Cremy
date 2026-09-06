@@ -27,7 +27,19 @@ def send_chat_request(args, user_input=None, images=None):
             clear_context()
             print(f"\n{Fore.RED}{Style.BRIGHT}Error: {Style.RESET_ALL}El modelo '{model}' no está disponible. Usa 'models' para ver los modelos disponibles.")
             return 1
-        
+    
+        # Validar si el modelo soporta visión
+        models_info = get_config("models") or {}
+        target_model_data = models_info.get(str(model))
+        model_caps = []
+        if isinstance(target_model_data, dict):
+            model_caps = target_model_data.get("capabilities", [])
+    
+        name_lower = str(model).lower()
+        supports_vision = ("vision" in model_caps) or any(
+            vn in name_lower for vn in ["vision", "minicpm-v", "llava", "moondream", "vl", "qwen3.5"]
+        )
+
         # Determina el contenido del mensaje del usuario
         if user_input:
             content = user_input
@@ -47,6 +59,23 @@ def send_chat_request(args, user_input=None, images=None):
 
         b64_images = []
         if image_paths:
+
+            if target_model_data and isinstance(target_model_data, dict) and not supports_vision:
+                vision_models = [
+                    m_name for m_name, m_val in models_info.items()
+                    if isinstance(m_val, dict) and ("vision" in m_val.get("capabilities", []) or any(vn in m_name.lower() for vn in ["vision", "minicpm-v", "llava"]))
+                ]
+                print(f"\n{Fore.RED}{Style.BRIGHT}Error de compatibilidad:{Style.RESET_ALL} El modelo '{Fore.CYAN}{model}{Style.RESET_ALL}' no tiene capacidad de procesamiento de imágenes (visión).")
+                if vision_models:
+                    print(f"{Fore.YELLOW}Modelos disponibles con soporte de visión en tu servidor:{Style.RESET_ALL}")
+                    for vm in vision_models:
+                        print(f"  • {Fore.GREEN}{vm}{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}Ejemplo para usar un modelo con visión: {Fore.CYAN}-m {vision_models[0]}{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}Ninguno de tus modelos instalados soporta visión. Puedes descargar uno ejecutando:{Style.RESET_ALL}")
+                    print(f"  {Fore.CYAN}ollama run qwen3.5:2b{Style.RESET_ALL} o {Fore.CYAN}ollama run llama3.2-vision{Style.RESET_ALL}")
+                return 1
+
             from utils.helpers import encode_image
             try:
                 for img_p in image_paths:
@@ -76,7 +105,18 @@ def send_chat_request(args, user_input=None, images=None):
         messages_payload = []
         if sys_prompt and str(sys_prompt).strip():
             messages_payload.append({"role": "system", "content": str(sys_prompt)})
-        messages_payload.extend(context)
+
+        sanitized_images_count = 0
+        for msg in context:
+            if not supports_vision and "images" in msg:
+                sanitized_msg = {"role": msg["role"], "content": msg["content"]}
+                messages_payload.append(sanitized_msg)
+                sanitized_images_count += 1
+            else:
+                messages_payload.append(msg)
+
+        if sanitized_images_count > 0:
+            print(f"{Fore.YELLOW}ℹ️  Aviso: El modelo '{model}' no soporta visión. Se omitieron las imágenes históricas ({sanitized_images_count}).{Style.RESET_ALL}")
 
         options = dict(get_config("options") or {})
         if getattr(args, 'temperature', None) is not None:
@@ -91,6 +131,7 @@ def send_chat_request(args, user_input=None, images=None):
         payload = {
             "model": str(model),
             "messages": messages_payload,
+            "think": get_config("think"),
             "stream": stream
         }
         if options:

@@ -5,13 +5,14 @@ import os
 from core.core_service import (
     instant_req, chat, continue_chat, delete_chat, show_models,
     change_models, change_server, system_prompt, show_usage,
-    show_options, set_option, reset_options
+    show_options, set_option, reset_options, think_handler
 )
 from utils.helpers import file_path
 
 default_data = {
     "url": "http://localhost:11434",
     "model": "ollama",
+    "think": False,
     "stream": True,
     "options": {},
     "system_prompt": "Eres un asistente útil.",
@@ -84,6 +85,9 @@ def main():
         parser_set_option.add_argument("-k", "--key", required=True, help="Nombre del parámetro (ej. temperature, num_ctx, top_p)")
         parser_set_option.add_argument("-v", "--value", required=True, help="Valor del parámetro (ej. 0.7, 4096)")
         parser_set_option.set_defaults(func=set_option)
+
+        parser_think = subparsers.add_parser("think", help="Activar o desactivar el modo razonamiento")
+        parser_think.set_defaults(func=think_handler)
 
         parser_reset_options = subparsers.add_parser("reset_options", help="Restablecer opciones de Ollama a valores por defecto")
         parser_reset_options.set_defaults(func=reset_options)

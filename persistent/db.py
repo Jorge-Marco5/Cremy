@@ -22,10 +22,16 @@ class DataService:
             CREATE TABLE IF NOT EXISTS conversations (
                 uuid TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
+                model TEXT DEFAULT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """
         )
+        try:
+            cursor.execute("ALTER TABLE conversations ADD COLUMN model TEXT DEFAULT NULL;")
+        except sqlite3.OperationalError:
+            pass
+
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS messages (
@@ -48,11 +54,14 @@ class DataService:
 
     #Configuraciones
 
-    def create_conversation(self, name: str):
+    def create_conversation(self, name: str, model: str = None):
         """Crea una nueva conversacion en la tabla de configuraciones."""
         cursor = self.conn.cursor()
         uuid = str(uuid4())
-        cursor.execute(""" INSERT INTO conversations (uuid, name) VALUES (?, ?) """, (uuid,name,))
+        cursor.execute(
+            """ INSERT INTO conversations (uuid, name, model) VALUES (?, ?, ?) """,
+            (uuid, name, model)
+        )
         self.conn.commit()
 
         item = self.show_one(str(uuid))
@@ -61,14 +70,14 @@ class DataService:
     def show_all(self):
         """Obtiene todas las conversaciones de la tabla de conversaciones."""
         cursor = self.conn.cursor()
-        cursor.execute("SELECT uuid, name, created_at FROM conversations")
+        cursor.execute("SELECT uuid, name, created_at, model FROM conversations")
         return cursor.fetchall()
 
     def show_one(self, uuid: str):
         """Obtiene una conversacion específica de la tabla de conversaciones."""
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT uuid, name, created_at FROM conversations WHERE uuid = ?",
+            "SELECT uuid, name, created_at, model FROM conversations WHERE uuid = ?",
             (uuid,)
         )
         return cursor.fetchone()

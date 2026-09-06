@@ -2,13 +2,15 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.live import Live
 from rich.syntax import Syntax
+from rich.table import Table
 import urllib.request
+import urllib.error
 import json
 import sys
 import os
 from halo import Halo
 from colorama import init, Fore, Style
-from utils.helpers import get_config, write_config, parse_option_value, parse_interactive_image_input, encode_image
+from utils.helpers import get_config, write_config, parse_option_value, parse_interactive_image_input, encode_image, format_bytes
 from utils.format_time import format_duration
 from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
@@ -49,7 +51,8 @@ def chat(args):
 
     #obtener las 5 primeras palabras del prompt
     name = " ".join(args.text.split()[:5])
-    args.uuid = dataservice.create_conversation(name)
+    model_to_bind = args.model if getattr(args, 'model', None) else get_config("model")
+    args.uuid = dataservice.create_conversation(name, model=model_to_bind)
 
     exit_code = send_chat_request(args)
 
@@ -57,7 +60,7 @@ def chat(args):
         req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
         if not req.strip():
             continue
-        if req == 'exit':
+        if req in ['exit', '/exit']:
             render_message("System", "**Saliendo...**")
             break
         prompt, attached_images = parse_interactive_image_input(req)
@@ -78,6 +81,18 @@ def continue_chat(args):
     
     # Asignar el UUID a los argumentos para que send_chat_request lo use
     args.uuid = uuid
+
+    # Detectar el modelo asociado a la conversación
+    conv_data = dataservice.show_one(str(uuid))
+    bound_model = conv_data[3] if conv_data and len(conv_data) > 3 else None
+
+    if not getattr(args, 'model', None):
+        if bound_model:
+            args.model = bound_model
+            print(f"{Fore.CYAN}ℹ️  Modelo asociado al chat: {Fore.GREEN}{args.model}{Style.RESET_ALL}")
+    else:
+        if bound_model and args.model != bound_model:
+            print(f"{Fore.YELLOW}ℹ️  Cambiando temporalmente el modelo a: {Fore.GREEN}{args.model}{Style.RESET_ALL} (original: {bound_model})")
 
     # Limpiar contexto y cargar el historial de la conversación seleccionada
     clear_context()
@@ -108,7 +123,7 @@ def continue_chat(args):
         req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
         if not req.strip():
             continue
-        if req == "exit":
+        if req in ["exit", "/exit"]:
             render_message("System", "**Saliendo...**")
             break
         prompt, attached_images = parse_interactive_image_input(req)
@@ -144,7 +159,8 @@ def select_conversation():
         print(f"{Fore.YELLOW}{Style.BRIGHT}No hay conversaciones guardadas.{Style.RESET_ALL}")
         return 1
     for conversation in conversations:
-        conversations_dict[conversation[0] + " - " + conversation[1]] = conversation[0]
+        model_tag = f" [{conversation[3]}]" if len(conversation) > 3 and conversation[3] else ""
+        conversations_dict[f"{conversation[0]} - {conversation[1]}{model_tag}"] = conversation[0]
 
     if not conversations_dict:
         print(f"{Fore.YELLOW}{Style.BRIGHT}No hay conversaciones guardadas.{Style.RESET_ALL}")
@@ -185,37 +201,131 @@ def show_models(args):
         headers={"Content-Type": "application/json"}
     )
 
-    spinner = Halo(text=f'{Fore.CYAN}Obteniendo modelos...{Style.RESET_ALL}', spinner='dots')
+    spinner = Halo(text=f'{Fore.CYAN}Consultando modelos en {url_base}...{Style.RESET_ALL}', spinner='dots')
     try:
         spinner.start()
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:
             spinner.stop()
             response_body = response.read().decode("utf-8")
             data = json.loads(response_body)
 
             models = data.get("models", [])
             models_dict = {}
-            if models:
-                print(f"{Fore.GREEN}{Style.BRIGHT}\nModelos disponibles:{Style.RESET_ALL}")
-                for model in models:
-                    model_name = model.get('name')
-                    print(f"{Fore.CYAN}  • {model_name}{Style.RESET_ALL}")
-                    models_dict[model_name] = model_name
-                write_config("models", models_dict)
-            else:
-                print(f"{Fore.YELLOW}{Style.BRIGHT}No se encontraron modelos.{Style.RESET_ALL}")
-            
-            print(f"{Fore.MAGENTA}{Style.BRIGHT}\nDefault:{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}  • {get_config('model')}{Style.RESET_ALL}")
+
+            if not models:
+                print(f"{Fore.YELLOW}{Style.BRIGHT}\nNo se encontraron modelos instalados en tu servidor Ollama.{Style.RESET_ALL}")
+                print(f"{Fore.CYAN}Puedes descargar un modelo ejecutando por ejemplo:")
+                print(f"  ollama run qwen3.5:2b{Style.RESET_ALL} (visión y razonamiento)")
+                print(f"  {Fore.CYAN}ollama run llama3.2:1b{Style.RESET_ALL} (ligero y rápido)")
+                return 0
+
+            current_default = get_config("model")
+            console = Console(force_terminal=True)
+
+            table = Table(
+                title=f"[bold magenta]Modelos de IA Disponibles en Ollama[/bold magenta]\n[dim]{url_base}[/dim]",
+                header_style="bold cyan",
+                border_style="dim blue",
+                show_lines=False
+            )
+            table.add_column("Modelo", style="bold", min_width=22)
+            table.add_column("Parámetros", justify="center")
+            table.add_column("Cuantización", justify="center")
+            table.add_column("Tamaño", justify="right")
+            table.add_column("Contexto", justify="center")
+            table.add_column("Capacidades Detectadas", justify="left")
+
+            for m in models:
+                model_name = m.get("name") or m.get("model", "desconocido")
+                size_bytes = m.get("size", 0)
+                size_str = format_bytes(size_bytes)
+                details = m.get("details") or {}
+                param_size = details.get("parameter_size", "N/A")
+                quant = details.get("quantization_level", "N/A")
+                ctx_len = details.get("context_length")
+
+                if ctx_len:
+                    ctx_str = f"{int(ctx_len // 1024)}k" if ctx_len >= 1024 else str(ctx_len)
+                else:
+                    ctx_str = "N/A"
+
+                raw_caps = list(m.get("capabilities", []))
+                families = [f.lower() for f in details.get("families", [])]
+                family = str(details.get("family", "")).lower()
+                name_lower = model_name.lower()
+
+                # Inferir capacidades si no vienen explícitas
+                if not raw_caps:
+                    if any(vf in families or vf == family for vf in ["clip", "mllama", "vision", "qwen35"]) or any(vn in name_lower for vn in ["vision", "llava", "minicpm-v", "moondream", "vl"]):
+                        raw_caps.append("vision")
+                    if any(rn in name_lower for rn in ["r1", "thinking", "reason", "qwq"]):
+                        raw_caps.append("thinking")
+                    if "coder" in name_lower or "code" in name_lower:
+                        raw_caps.append("code")
+                    if not raw_caps:
+                        raw_caps.append("completion")
+
+                badges = []
+                if "vision" in raw_caps or any(vn in name_lower for vn in ["vision", "minicpm-v", "llava"]):
+                    badges.append("[bold cyan]Visión[/bold cyan]")
+                if "thinking" in raw_caps or any(rn in name_lower for rn in ["thinking", "r1"]):
+                    badges.append("[bold magenta]Razonamiento[/bold magenta]")
+                if "tools" in raw_caps:
+                    badges.append("[bold yellow]Tools[/bold yellow]")
+                if "code" in raw_caps or "coder" in name_lower:
+                    badges.append("[bold blue]Código[/bold blue]")
+                if "completion" in raw_caps:
+                    badges.append("[dim]Texto[/dim]")
+
+                cap_display = " ".join(badges) if badges else "[dim]General[/dim]"
+
+                is_default = (model_name == current_default)
+                if is_default:
+                    name_display = f"[bold green]{model_name}[/bold green] [bold yellow]★ (Default)[/bold yellow]"
+                else:
+                    name_display = f"[white]{model_name}[/white]"
+
+                table.add_row(name_display, param_size, quant, size_str, ctx_str, cap_display)
+
+                models_dict[model_name] = {
+                    "name": model_name,
+                    "capabilities": raw_caps,
+                    "parameter_size": param_size,
+                    "quantization": quant,
+                    "size": size_bytes,
+                    "context_length": ctx_len
+                }
+
+            write_config("models", models_dict)
+            print()
+            console.print(table)
+            print(f"\n{Fore.MAGENTA}{Style.BRIGHT}Modelo activo por defecto:{Style.RESET_ALL} {Fore.GREEN}{current_default}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}Tip: Cambia el modelo por defecto con: {Fore.CYAN}python main.py change_model -m <nombre>{Style.RESET_ALL}")
             return 0
+
+    except urllib.error.HTTPError as e:
+        spinner.stop()
+        print(f"{Fore.RED}{Style.BRIGHT}\nError HTTP del servidor ({e.code}): {e.reason}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Verifica que la URL del servidor Ollama sea correcta: {Fore.CYAN}{url_base}{Style.RESET_ALL}")
+        return 1
+    except urllib.error.URLError as e:
+        spinner.stop()
+        print(f"{Fore.RED}{Style.BRIGHT}\nError de conexión con Ollama: {e.reason}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}No se pudo contactar al servidor en: {Fore.CYAN}{url_base}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Verifica que el servicio esté corriendo con: {Fore.CYAN}ollama serve{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}O cambia la URL configurada con: {Fore.CYAN}python main.py change_server -u <url>{Style.RESET_ALL}")
+        return 1
+    except TimeoutError:
+        spinner.stop()
+        print(f"{Fore.RED}{Style.BRIGHT}\nTiempo de espera agotado al conectar con Ollama en {url_base}.{Style.RESET_ALL}")
+        return 1
     except json.JSONDecodeError:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}Error: La respuesta del servidor no es un JSON válido.{Style.RESET_ALL}")
+        print(f"{Fore.RED}{Style.BRIGHT}\nError: La respuesta del servidor no es un JSON válido.{Style.RESET_ALL}")
         return 1
     except Exception as e:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}Error de conexión: {e}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Asegúrate de que Ollama está corriendo con el comando:{Style.RESET_ALL} {Fore.CYAN}ollama serve{Style.RESET_ALL}")
+        print(f"{Fore.RED}{Style.BRIGHT}\nError inesperado: {e}{Style.RESET_ALL}")
         return 1
 
 def change_models(args):
@@ -328,4 +438,14 @@ def set_option(args):
 def reset_options(args):
     write_config("options", {})
     print(f"{Fore.GREEN}{Style.BRIGHT}\nOpciones restablecidas exitosamente. Ahora se usan los valores por defecto de Ollama.{Style.RESET_ALL}")
+    return 0
+
+def think_handler(args):
+    think_enabled = get_config("think")
+    if think_enabled:
+        write_config("think", False)
+        print(f"{Fore.GREEN}{Style.BRIGHT}\nModo razonamiento desactivado exitosamente.{Style.RESET_ALL}")
+    else:
+        write_config("think", True)
+        print(f"{Fore.GREEN}{Style.BRIGHT}\nModo razonamiento activado exitosamente.{Style.RESET_ALL}")
     return 0

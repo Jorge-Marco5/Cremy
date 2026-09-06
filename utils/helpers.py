@@ -135,3 +135,17 @@ def parse_interactive_image_input(user_input: str) -> tuple:
         prompt = "¿Puedes describir y analizar esta imagen en detalle?"
 
     return prompt, [img_path]
+
+def format_bytes(size_bytes: int) -> str:
+    """Convierte bytes a formato legible (B, KB, MB, GB)."""
+    if size_bytes is None:
+        return "N/A"
+    try:
+        size = float(size_bytes)
+    except (ValueError, TypeError):
+        return "N/A"
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if size < 1024.0:
+            return f"{size:.2f} {unit}" if unit in ["MB", "GB", "TB"] else f"{int(size)} {unit}"
+        size /= 1024.0
+    return f"{size:.2f} PB"
