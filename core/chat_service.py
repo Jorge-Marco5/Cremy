@@ -16,8 +16,8 @@ def clear_context():
     context.clear()
 
 def send_chat_request(args, user_input=None, images=None):
+    """Realiza una peticion '/api/chat' a la API de Ollama."""
     try:
-        """Realiza una peticion '/api/chat' a la API de Ollama."""
         url_base = get_config("url")
         stream = get_config("stream")
         models = get_config("models")

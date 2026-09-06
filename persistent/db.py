@@ -68,9 +68,9 @@ class DataService:
         return item[0]
 
     def show_all(self):
-        """Obtiene todas las conversaciones de la tabla de conversaciones."""
+        """Obtiene todas las conversaciones de la tabla de conversaciones ordenadas de forma descendente en base a la fecha de creacion."""
         cursor = self.conn.cursor()
-        cursor.execute("SELECT uuid, name, created_at, model FROM conversations")
+        cursor.execute("SELECT uuid, name, created_at, model FROM conversations ORDER BY created_at DESC")
         return cursor.fetchall()
 
     def show_one(self, uuid: str):
