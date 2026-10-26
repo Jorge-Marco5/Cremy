@@ -4,34 +4,59 @@ IAMarker es una herramienta de línea de comandos (CLI) que te permite interactu
 
 ## Instalación
 
-Clonar el repositorio e instalar dependencias:
+Clonar el repositorio:
 
-```
+```bash
 git clone https://github.com/Jorge-Marco5/IAMarker.git
 cd IAMarker
+```
 
+### Opción 1: Usando `uv` (Recomendado)
+
+Si tienes [uv](https://docs.astral.sh/uv/) instalado, puedes crear el entorno virtual e instalar las dependencias automáticamente con:
+
+```bash
+uv sync
+```
+
+Para ejecutar la herramienta con `uv`:
+
+```bash
+uv run main.py --help
+# O usando el script del proyecto directamente:
+uv run iamarker --help
+# O mediante el script de inicio rápido:
+./run.sh --help
+```
+
+### Opción 2: Usando `pip` tradicional
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
 ```
 
 ## Configuracion y uso
+
+> **Nota:** Todos los ejemplos a continuación pueden ejecutarse anteponiendo `uv run` (ej. `uv run main.py <accion>` o `uv run iamarker <accion>`), usando `./run.sh <accion>`, o directamente con `python main.py <accion>` si ya activaste el entorno virtual (`.venv`).
 
 - ### Comandos de ayuda general
 
   Para ver lista de acciones dentro del programa
 
-  ```
-  python main.py --help
+  ```bash
+  uv run main.py --help
   # ó tambien
-  python main.py -h
+  uv run main.py -h
   ```
 
   Tambien ayuda de una accion en especifico
 
-  ```
-  python main.py <accion> --help
+  ```bash
+  uv run main.py <accion> --help
   # Ejemplo
-  python main.py change_model --help
+  uv run main.py change_model --help
   ```
 
 - ### Configurar direccion del servidor
