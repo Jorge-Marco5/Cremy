@@ -53,9 +53,8 @@ def chat(args):
     name = " ".join(args.text.split()[:5])
     model_to_bind = args.model if getattr(args, 'model', None) else get_config("model")
     args.uuid = dataservice.create_conversation(name, model=model_to_bind)
-
+    print(f'\nNew Chat - {args.uuid}')
     exit_code = send_chat_request(args)
-
     while exit_code == 0:
         req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
         if not req.strip():

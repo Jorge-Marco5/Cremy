@@ -43,14 +43,14 @@ def main():
         add_options_arguments(parser_question)
         parser_question.set_defaults(func=instant_req)
 
-        parser_init_chat = subparsers.add_parser("chat", help="Iniciar un chat con un modelo de IA local")
+        parser_init_chat = subparsers.add_parser("chat", help="Iniciar un nuevo chat")
         parser_init_chat.add_argument("-t", "--text", help="Agrega tu pregunta envuelta en ' '")
         parser_init_chat.add_argument("-m", "--model", help="Nombre del modelo", nargs='?')
         parser_init_chat.add_argument("-i", "--image", nargs="+", help="Ruta de una o más imágenes para modelos multimodales")
         add_options_arguments(parser_init_chat)
         parser_init_chat.set_defaults(func=chat)
 
-        parser_continue_chat = subparsers.add_parser("continue_chat", help="Continuar un chat con un modelo de IA local")
+        parser_continue_chat = subparsers.add_parser("resume", help="Busca y continua un chat anterior")
         parser_continue_chat.add_argument("-m", "--model", help="Nombre del modelo")
         parser_continue_chat.add_argument("-i", "--image", nargs="+", help="Ruta de una o más imágenes para adjuntar en este turno")
         add_options_arguments(parser_continue_chat)
