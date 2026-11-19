@@ -46,6 +46,10 @@ def chat(args):
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
 
+    if get_config('model') is 'ollama':
+        print(f"{Fore.RED}{Style.BRIGHT}Error: No se ingreso un modelo valido, configura con el comando 'change_model'.{Style.RESET_ALL}")
+        return 1
+
     # Limpiar el contexto en memoria para una nueva conversación
     clear_context()
 
@@ -329,6 +333,7 @@ def show_models(args):
 
 def change_models(args):
     if not args.model:
+        print(f"\nModelo actual: {get_config("model")}\n")
         print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa el nombre del modelo. Consulta con 'models' para ver los disponibles.{Style.RESET_ALL}")
         return 1
 
@@ -377,22 +382,24 @@ def show_usage(args):
     print(f"{Fore.CYAN}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(usage[args.model]['duration'])}")
     print("\n")
 
-def change_server(args):
+def change_host(args):
     try:
         if not args.url:
-            print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa la URL del servidor.{Style.RESET_ALL}")
+            print(f"\nHost actual: {get_config("url")}\n")
+            print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa la URL del host.{Style.RESET_ALL}")
             return 1
 
         write_config("url", args.url)
-        print(f"{Fore.GREEN}{Style.BRIGHT}\nURL del servidor cambiada exitosamente a: {get_config('url')}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}{Style.BRIGHT}\nURL del host cambiada exitosamente a: {get_config('url')}{Style.RESET_ALL}")
         return 0
     except Exception as e:
-        print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar la URL del servidor: {e}{Style.RESET_ALL}")
+        print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar la URL del host: {e}{Style.RESET_ALL}")
 
 def system_prompt(args):
     try:
         if not args.text:
-            print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa el system prompt.{Style.RESET_ALL}")
+            print(f"\nSystem prompt actual: {get_config("system_prompt")}\n")
+            print(f"{Fore.YELLOW}{Style.BRIGHT}No se ingreso un nuevo system prompt.{Style.RESET_ALL}")
             return 1
         write_config("system_prompt", args.text)
         print(f"{Fore.GREEN}{Style.BRIGHT}\nSystem prompt cambiado exitosamente.{Style.RESET_ALL}")

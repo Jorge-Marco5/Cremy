@@ -4,7 +4,7 @@ import sys
 import os
 from core.core_service import (
     instant_req, chat, continue_chat, delete_chat, show_models,
-    change_models, change_server, system_prompt, show_usage,
+    change_models, change_host, system_prompt, show_usage,
     show_options, set_option, reset_options, think_handler
 )
 from utils.helpers import file_path
@@ -66,9 +66,9 @@ def main():
         parser_default_model.add_argument("-m", "--model", help="Nombre del modelo")
         parser_default_model.set_defaults(func=change_models)
 
-        parse_change_server = subparsers.add_parser("change_server", help="Cambiar la direccion del servidor")
-        parse_change_server.add_argument("-u", "--url", help="Url del servidor")
-        parse_change_server.set_defaults(func=change_server)
+        parse_change_host = subparsers.add_parser("change_host", help="Cambiar la direccion del servidor")
+        parse_change_host.add_argument("-u", "--url", help="Url del servidor")
+        parse_change_host.set_defaults(func=change_host)
 
         parse_system_prompt = subparsers.add_parser("system_prompt", help="Definir un system prompt personalizado")
         parse_system_prompt.add_argument("-t", "--text", help="System prompt personalizado envuelto en ' '")
