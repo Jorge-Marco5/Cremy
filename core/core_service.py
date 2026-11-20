@@ -16,7 +16,6 @@ from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
 from persistent.db import DataService
 from gui.render import render_conversation
-# pyrefly: ignore [missing-import]
 from simple_term_menu import TerminalMenu
 
 
@@ -46,7 +45,7 @@ def chat(args):
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
 
-    if get_config('model') is 'ollama':
+    if get_config('model') == 'ollama':
         print(f"{Fore.RED}{Style.BRIGHT}Error: No se ingreso un modelo valido, configura con el comando 'change_model'.{Style.RESET_ALL}")
         return 1
 
