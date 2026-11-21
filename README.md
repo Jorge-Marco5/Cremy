@@ -2,6 +2,12 @@
 
 IAMarker es una herramienta de línea de comandos (CLI) que te permite interactuar con la API de Ollama. Con ella, puedes realizar consultas a modelos de IA instalados localmente y obtener las respuestas en formato Markdown.
 
+## Tabla de Contenidos
+
+1. [Instalacion](#-instalacion)
+2. [Otras guias](#-otras-guias)
+3. [Configuración y uso](#-configuracion-y-uso)
+
 ## Instalación
 
 Clonar el repositorio:
@@ -37,6 +43,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Otras Guias
+
+[**1. Tools**](./docs/tools.md)
+
 ## Configuracion y uso
 
 > **Nota:** Todos los ejemplos a continuación pueden ejecutarse anteponiendo `uv run` (ej. `uv run main.py <accion>` o `uv run iamarker <accion>`), usando `./run.sh <accion>`, o directamente con `python main.py <accion>` si ya activaste el entorno virtual (`.venv`).
@@ -59,19 +69,19 @@ pip install -r requirements.txt
   uv run main.py change_model --help
   ```
 
-- ### Configurar direccion del servidor
+- ### Configurar direccion del host
 
   Por defecto la heramienta se conecta a una direccion local (localhost), si desea cambiar la direccion:
 
   ```
-  python main.py change_server -u <tu ip o host:puerto>
+  python main.py change_host -u <tu ip o host:puerto>
   # Ejemplo
-  python main.py change_server -u http://192.168.1.2:11434
+  python main.py change_host -u http://192.168.1.2:11434
   ```
 
 - ### Ver modelos disponibles y sus capacidades
 
-  Muestra una tabla detallada con todos los modelos instalados en tu servidor de Ollama, incluyendo cantidad de parámetros, nivel de cuantización, tamaño en disco, tamaño de ventana de contexto y sus capacidades detectadas (👁️ Visión / Multimodal, 🧠 Razonamiento / Thinking, 🛠️ Tools, 💻 Código, 💬 Texto):
+  Muestra una tabla detallada con todos los modelos instalados en tu host de Ollama, incluyendo cantidad de parámetros, nivel de cuantización, tamaño en disco, tamaño de ventana de contexto y sus capacidades detectadas (👁️ Visión / Multimodal, 🧠 Razonamiento / Thinking, 🛠️ Tools, 💻 Código, 💬 Texto):
 
   ```
   python main.py models
@@ -130,11 +140,11 @@ pip install -r requirements.txt
 
 - ### Seleccionar una conversacion
 
-  Selecciona una conversacion anterior guardada en el sistema
+  Continua una conversacio anterior
   - las conversaciones se guardan iniciando una solicitud como _chat_, no como _req_
 
   ```
-  python main.py continue_chat
+  python main.py resume
 
   Seleccione una conversación
   > 223752fb-b75f-481f-ad8e-a79c848a550c - crea un hola mundo en python
@@ -145,9 +155,9 @@ pip install -r requirements.txt
   Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor
 
   ```
-  python main.py continue_chat -m <tu-otro-modelo>
+  python main.py resume -m <tu-otro-modelo>
   # Ejemplo
-  python main.py continue_chat -m <gemma4:12b>
+  python main.py resume -m <gemma4:12b>
   ```
 
 - ### Eliminar una conversacion
