@@ -22,6 +22,7 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
     Metodo para renderizar la respuesta del modelo en la terminal
     """
     full_response_content = ""
+    tool_calls = []
     try:
         spinner = Halo(text=f'{Fore.CYAN}Pensando...{Style.RESET_ALL}', spinner='dots')
         print(f"{Fore.MAGENTA}{Style.BRIGHT}\nModel: {agent}{Style.RESET_ALL}")
@@ -59,7 +60,12 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
                             tokens = res.get("eval_count", 0)
                             duration = res.get("eval_duration", 0)
                             
-                        content = res.get("message", {}).get("content", "")
+                        msg_obj = res.get("message", {})
+                        chunk_tools = msg_obj.get("tool_calls")
+                        if chunk_tools:
+                            tool_calls.extend(chunk_tools)
+
+                        content = msg_obj.get("content", "")
                         if not content:
                             # No hay contenido en este fragmento, continuar
                             continue
@@ -133,16 +139,17 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
                             clear_active_line(current_line, terminal_width)
                             console.print(Markdown(current_line, code_theme="github-dark"))
                 else:
-                    
                     response_body = response.read().decode("utf-8")
                     res = json.loads(response_body)
-                    content = res.get("message", {}).get("content", "")
-                    
+                    msg_obj = res.get("message", {})
+                    content = msg_obj.get("content", "")
+                    tool_calls = msg_obj.get("tool_calls", [])
                     
                     tokens = res.get("eval_count", 0)
                     duration = res.get("eval_duration", 0)
                     full_response_content = content
-                    console.print(Markdown(content))
+                    if content:
+                        console.print(Markdown(content))
         finally:
             spinner.stop()
         if tokens > 0:
@@ -150,11 +157,11 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
         if duration > 0:
             print(f'{Fore.GREEN}{Style.BRIGHT}Duracion: {Style.RESET_ALL}{format_duration(duration)}') 
         save_usage(agent, tokens, duration)
-        return full_response_content, 0
+        return full_response_content, 0, tool_calls
     except Exception as e:
         print(f"{Fore.RED}{Style.BRIGHT}Error de conexión: {e}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Asegúrate de que Ollama está corriendo con el comando:{Style.RESET_ALL} {Fore.CYAN}ollama serve{Style.RESET_ALL}")
-        return None, 1
+        return None, 1, []
 
 def render_message(agent: str, content: str):
     """
@@ -179,22 +186,47 @@ def render_conversation(uuid: str):
         #Renderizar mensajes
         for message in messages:
             role = message[1]
+            content = message[2]
+            raw_imgs = message[4] if len(message) > 4 else None
+            raw_tools = message[5] if len(message) > 5 else None
+
+            console = Console(force_terminal=True)
+
             if role == "user":
                 print(f"{Fore.YELLOW}{Style.BRIGHT}\nUsuario:{Style.RESET_ALL}")
-                if len(message) > 4 and message[4]:
+                if raw_imgs:
                     try:
-                        raw_imgs = json.loads(message[4]) if isinstance(message[4], str) else message[4]
-                        if raw_imgs:
-                            img_str = ", ".join(raw_imgs) if isinstance(raw_imgs, list) else str(raw_imgs)
+                        raw_list = json.loads(raw_imgs) if isinstance(raw_imgs, str) else raw_imgs
+                        if raw_list:
+                            img_str = ", ".join(raw_list) if isinstance(raw_list, list) else str(raw_list)
                             print(f"{Fore.CYAN}🖼️  [Imagen adjunta: {img_str}]{Style.RESET_ALL}")
                     except Exception:
                         pass
+                if content:
+                    render_static_message(content, console)
+            elif role == "tool":
+                print(f"{Fore.BLUE}{Style.BRIGHT}\nHerramienta (Resultado):{Style.RESET_ALL}")
+                try:
+                    tool_json = json.loads(content)
+                    syntax = Syntax(json.dumps(tool_json, indent=2, ensure_ascii=False), lexer="json", theme="github-dark", word_wrap=True)
+                    console.print(syntax)
+                except Exception:
+                    render_static_message(content, console)
             else:
                 print(f"{Fore.MAGENTA}{Style.BRIGHT}\nAsistente:{Style.RESET_ALL}")
-            console = Console(force_terminal=True)
-            #mensaje
-            if message[2]:
-                render_static_message(message[2], console)
+                if raw_tools:
+                    try:
+                        parsed_tools = json.loads(raw_tools) if isinstance(raw_tools, str) else raw_tools
+                        if parsed_tools:
+                            for tc in parsed_tools:
+                                fn = tc.get("function", {})
+                                fn_name = fn.get("name", "tool")
+                                fn_args = fn.get("arguments", {})
+                                print(f"{Fore.YELLOW}🛠️  [Llamada a {fn_name}: {json.dumps(fn_args, ensure_ascii=False)}]{Style.RESET_ALL}")
+                    except Exception:
+                        pass
+                if content:
+                    render_static_message(content, console)
         
     except Exception as e:
         print(f"{Fore.RED}{Style.BRIGHT}Error al obtener los mensajes: {e}{Style.RESET_ALL}")
