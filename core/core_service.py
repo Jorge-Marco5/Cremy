@@ -116,6 +116,13 @@ def continue_chat(args):
                             msg_obj["images"] = b64_list
                 except Exception:
                     pass
+            if len(message) > 5 and message[5]:
+                try:
+                    tools_list = json.loads(message[5]) if isinstance(message[5], str) else message[5]
+                    if tools_list:
+                        msg_obj["tool_calls"] = tools_list
+                except Exception:
+                    pass
             context.append(msg_obj)
 
     render_conversation(str(uuid))

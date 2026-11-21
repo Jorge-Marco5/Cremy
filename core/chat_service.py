@@ -15,6 +15,23 @@ def clear_context():
     """Limpia el historial del chat en memoria."""
     context.clear()
 
+def _build_messages_payload(messages_list, supports_vision):
+    """Construye el payload de mensajes formateado para la API de Ollama."""
+    sys_prompt = get_config("system_prompt")
+    messages_payload = []
+    if sys_prompt and str(sys_prompt).strip():
+        messages_payload.append({"role": "system", "content": str(sys_prompt)})
+
+    for msg in messages_list:
+        msg_dict = {"role": msg["role"], "content": msg.get("content", "")}
+        if "tool_calls" in msg and msg["tool_calls"]:
+            msg_dict["tool_calls"] = msg["tool_calls"]
+        if supports_vision and "images" in msg and msg["images"]:
+            msg_dict["images"] = msg["images"]
+        messages_payload.append(msg_dict)
+    return messages_payload
+
+
 def send_chat_request(args, user_input=None, images=None):
     """Realiza una peticion '/api/chat' a la API de Ollama."""
     try:
@@ -101,22 +118,16 @@ def send_chat_request(args, user_input=None, images=None):
 
         url = f"{url_base}/api/chat"
 
-        sys_prompt = get_config("system_prompt")
-        messages_payload = []
-        if sys_prompt and str(sys_prompt).strip():
-            messages_payload.append({"role": "system", "content": str(sys_prompt)})
+        # Detección de soporte y esquemas de herramientas
+        supports_tools = ("tools" in model_caps)
+        from tools.registry import registry
+        from utils.helpers import get_tools_config
+        from gui.tools_view import ask_tool_confirmation, render_tool_result
 
-        sanitized_images_count = 0
-        for msg in context:
-            if not supports_vision and "images" in msg:
-                sanitized_msg = {"role": msg["role"], "content": msg["content"]}
-                messages_payload.append(sanitized_msg)
-                sanitized_images_count += 1
-            else:
-                messages_payload.append(msg)
+        tools_cfg = get_tools_config()
+        active_tools = registry.get_active_tools_schemas(tools_cfg) if supports_tools else []
 
-        if sanitized_images_count > 0:
-            print(f"{Fore.YELLOW}ℹ️  Aviso: El modelo '{model}' no soporta visión. Se omitieron las imágenes históricas ({sanitized_images_count}).{Style.RESET_ALL}")
+        messages_payload = _build_messages_payload(context, supports_vision)
 
         options = dict(get_config("options") or {})
         if getattr(args, 'temperature', None) is not None:
@@ -134,6 +145,8 @@ def send_chat_request(args, user_input=None, images=None):
             "think": get_config("think"),
             "stream": stream
         }
+        if active_tools:
+            payload["tools"] = active_tools
         if options:
             payload["options"] = options
 
@@ -142,8 +155,97 @@ def send_chat_request(args, user_input=None, images=None):
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"}
         )
-        response_content, exit_code = render_response(str(model), req, bool(stream))
-        if exit_code == 0 and response_content:
+        response_content, exit_code, tool_calls = render_response(str(model), req, bool(stream))
+
+        # Ciclo de ejecución de herramientas (tope de 5 iteraciones)
+        max_iterations = 5
+        iteration = 0
+
+        while exit_code == 0 and tool_calls and iteration < max_iterations:
+            iteration += 1
+
+            # Registrar mensaje del asistente con sus tool_calls
+            assistant_turn = {
+                "role": "assistant",
+                "content": response_content or "",
+                "tool_calls": tool_calls
+            }
+            context.append(assistant_turn)
+            if args.uuid:
+                dataServices.insert_message({
+                    "conversation_uuid": args.uuid,
+                    "role": "assistant",
+                    "content": response_content or "",
+                    "tool_calls": tool_calls
+                })
+
+            for tc in tool_calls:
+                fn_info = tc.get("function", {})
+                t_name = fn_info.get("name", "")
+                raw_args = fn_info.get("arguments", {})
+                if isinstance(raw_args, str):
+                    try:
+                        args_dict = json.loads(raw_args)
+                    except Exception:
+                        args_dict = {}
+                elif isinstance(raw_args, dict):
+                    args_dict = raw_args
+                else:
+                    args_dict = {}
+
+                # Verificar si requiere confirmación del usuario
+                needs_confirm = registry.is_confirmation_required(t_name, tools_cfg)
+                if needs_confirm:
+                    allowed = ask_tool_confirmation(t_name, args_dict)
+                else:
+                    allowed = True
+                    print(f"{Fore.CYAN}⚡ [Ejecutando herramienta: {t_name}]{Style.RESET_ALL}")
+
+                if allowed:
+                    exec_res = registry.execute_tool(t_name, args_dict)
+                    is_err = not exec_res.get("success", False)
+                    res_display = exec_res.get("result") if not is_err else exec_res.get("error")
+                    render_tool_result(t_name, res_display, is_error=is_err)
+                else:
+                    exec_res = {"success": False, "error": "Ejecución denegada por el usuario."}
+                    render_tool_result(t_name, "Ejecución denegada por el usuario.", is_error=True)
+
+                tool_msg = {
+                    "role": "tool",
+                    "content": json.dumps(exec_res, ensure_ascii=False)
+                }
+                context.append(tool_msg)
+                if args.uuid:
+                    dataServices.insert_message({
+                        "conversation_uuid": args.uuid,
+                        "role": "tool",
+                        "content": json.dumps(exec_res, ensure_ascii=False)
+                    })
+
+            # Generar siguiente consulta a Ollama con los resultados de las herramientas
+            next_messages = _build_messages_payload(context, supports_vision)
+            next_payload = {
+                "model": str(model),
+                "messages": next_messages,
+                "think": get_config("think"),
+                "stream": stream
+            }
+            if active_tools:
+                next_payload["tools"] = active_tools
+            if options:
+                next_payload["options"] = options
+
+            next_req = urllib.request.Request(
+                url,
+                data=json.dumps(next_payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            response_content, exit_code, tool_calls = render_response(str(model), next_req, bool(stream))
+
+        if iteration >= max_iterations and tool_calls:
+            print(f"\n{Fore.YELLOW}ℹ️  Se alcanzó el límite de {max_iterations} iteraciones de herramientas.{Style.RESET_ALL}")
+
+        if exit_code == 0 and response_content and not tool_calls:
             context.append({"role": "assistant", "content": response_content})
             if args.uuid:
                 success = dataServices.insert_message({
@@ -153,7 +255,7 @@ def send_chat_request(args, user_input=None, images=None):
                 })
                 if not success:
                     print(f"\n{Fore.YELLOW}{Style.BRIGHT}Advertencia:{Style.RESET_ALL} No se pudo guardar la respuesta del asistente en la base de datos.")
-        
+
         return exit_code
     except Exception as e:
         print(f"{Fore.RED}{Style.BRIGHT}Error de conexión: {e}{Style.RESET_ALL}")
