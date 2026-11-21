@@ -454,3 +454,108 @@ def think_handler(args):
         write_config("think", True)
         print(f"{Fore.GREEN}{Style.BRIGHT}\nModo razonamiento activado exitosamente.{Style.RESET_ALL}")
     return 0
+
+def show_tools(args):
+    """Muestra una tabla con las herramientas disponibles, estado y confirmación."""
+    from tools.registry import registry
+    from utils.helpers import get_tools_config
+
+    cfg = get_tools_config()
+    global_enabled = cfg.get("enabled", True)
+    tools_settings = cfg.get("tools", {})
+    all_tools = registry.list_tools()
+
+    console = Console(force_terminal=True)
+    status_badge = "[bold green]ACTIVADO[/bold green]" if global_enabled else "[bold red]DESACTIVADO[/bold red]"
+    
+    table = Table(
+        title=f"[bold magenta]Herramientas de IA (Tools / Function Calling)[/bold magenta]\nEstado global: {status_badge}",
+        header_style="bold cyan",
+        border_style="dim blue",
+        show_lines=False
+    )
+    table.add_column("Herramienta", style="bold", min_width=20)
+    table.add_column("Estado", justify="center")
+    table.add_column("Confirmación", justify="center")
+    table.add_column("Descripción", justify="left")
+
+    for tool in all_tools:
+        tool_cfg = tools_settings.get(tool.name, {})
+        is_enabled = tool_cfg.get("enabled", tool.enabled_by_default)
+        needs_confirm = tool_cfg.get("require_confirmation", tool.require_confirmation)
+
+        enabled_str = "[bold green]🟢 Activada[/bold green]" if is_enabled else "[bold red]🔴 Desactivada[/bold red]"
+        confirm_str = "[yellow]🔒 Requerida[/yellow]" if needs_confirm else "[dim green]⚡ Automática[/dim green]"
+
+        table.add_row(
+            f"[bold cyan]{tool.name}[/bold cyan]",
+            enabled_str,
+            confirm_str,
+            tool.description
+        )
+
+    console.print(table)
+    print(f"\n{Fore.YELLOW}Tip:{Style.RESET_ALL}")
+    print(f"  • Activar/desactivar: {Fore.CYAN}python main.py enable_tool -t <nombre>{Style.RESET_ALL} / {Fore.CYAN}disable_tool -t <nombre>{Style.RESET_ALL}")
+    print(f"  • Cambiar confirmación: {Fore.CYAN}python main.py tool_confirm -t <nombre> -v <true/false>{Style.RESET_ALL}")
+    print(f"  • Conmutar globalmente: {Fore.CYAN}python main.py toggle_tools{Style.RESET_ALL}")
+    return 0
+
+def enable_tool(args):
+    """Activa una herramienta específica."""
+    from tools.registry import registry
+    from utils.helpers import update_tool_setting
+
+    tool_name = args.tool.strip()
+    if not registry.get_tool(tool_name):
+        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
+        return 1
+
+    update_tool_setting(tool_name, enabled=True)
+    print(f"{Fore.GREEN}{Style.BRIGHT}\nHerramienta '{tool_name}' activada exitosamente.{Style.RESET_ALL}")
+    return 0
+
+def disable_tool(args):
+    """Desactiva una herramienta específica."""
+    from tools.registry import registry
+    from utils.helpers import update_tool_setting
+
+    tool_name = args.tool.strip()
+    if not registry.get_tool(tool_name):
+        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
+        return 1
+
+    update_tool_setting(tool_name, enabled=False)
+    print(f"{Fore.YELLOW}{Style.BRIGHT}\nHerramienta '{tool_name}' desactivada exitosamente.{Style.RESET_ALL}")
+    return 0
+
+def set_tool_confirmation(args):
+    """Configura si una herramienta requiere confirmación previa."""
+    from tools.registry import registry
+    from utils.helpers import update_tool_setting, parse_option_value
+
+    tool_name = args.tool.strip()
+    if not registry.get_tool(tool_name):
+        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
+        return 1
+
+    parsed_val = parse_option_value(args.value)
+    if not isinstance(parsed_val, bool):
+        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} El valor debe ser 'true' o 'false'.")
+        return 1
+
+    update_tool_setting(tool_name, require_confirmation=parsed_val)
+    mode_str = "requerirá confirmación del usuario" if parsed_val else "se ejecutará automáticamente sin confirmación"
+    print(f"{Fore.GREEN}{Style.BRIGHT}\nConfiguración actualizada:{Style.RESET_ALL} La herramienta '{tool_name}' {mode_str}.")
+    return 0
+
+def toggle_tools_handler(args):
+    """Conmuta el uso de herramientas a nivel global."""
+    from utils.helpers import toggle_tools_global
+
+    new_state = toggle_tools_global()
+    if new_state:
+        print(f"{Fore.GREEN}{Style.BRIGHT}\nSistema de herramientas activado globalmente.{Style.RESET_ALL}")
+    else:
+        print(f"{Fore.YELLOW}{Style.BRIGHT}\nSistema de herramientas desactivado globalmente.{Style.RESET_ALL}")
+    return 0

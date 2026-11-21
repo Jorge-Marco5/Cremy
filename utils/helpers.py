@@ -149,3 +149,46 @@ def format_bytes(size_bytes: int) -> str:
             return f"{size:.2f} {unit}" if unit in ["MB", "GB", "TB"] else f"{int(size)} {unit}"
         size /= 1024.0
     return f"{size:.2f} PB"
+
+def get_tools_config() -> dict:
+    """Obtiene la configuración de herramientas asegurando valores por defecto."""
+    from tools.registry import registry
+    cfg = get_config("tools_config")
+    default_cfg = registry.get_default_tools_config()
+    if not isinstance(cfg, dict):
+        cfg = default_cfg
+        write_config("tools_config", cfg)
+        return cfg
+
+    tools = cfg.setdefault("tools", {})
+    updated = False
+    for tool_name, defaults in default_cfg["tools"].items():
+        if tool_name not in tools:
+            tools[tool_name] = defaults
+            updated = True
+    if updated:
+        write_config("tools_config", cfg)
+    return cfg
+
+def update_tool_setting(tool_name: str, enabled: bool = None, require_confirmation: bool = None) -> dict:
+    """Actualiza la configuración de una herramienta específica."""
+    cfg = get_tools_config()
+    tools = cfg.setdefault("tools", {})
+    if tool_name not in tools:
+        tools[tool_name] = {}
+    if enabled is not None:
+        tools[tool_name]["enabled"] = bool(enabled)
+    if require_confirmation is not None:
+        tools[tool_name]["require_confirmation"] = bool(require_confirmation)
+    write_config("tools_config", cfg)
+    return cfg
+
+def toggle_tools_global(enabled: bool = None) -> bool:
+    """Activa o desactiva el uso de tools globalmente."""
+    cfg = get_tools_config()
+    if enabled is not None:
+        cfg["enabled"] = bool(enabled)
+    else:
+        cfg["enabled"] = not cfg.get("enabled", True)
+    write_config("tools_config", cfg)
+    return cfg["enabled"]

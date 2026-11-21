@@ -5,7 +5,9 @@ import os
 from core.core_service import (
     instant_req, chat, continue_chat, delete_chat, show_models,
     change_models, change_host, system_prompt, show_usage,
-    show_options, set_option, reset_options, think_handler
+    show_options, set_option, reset_options, think_handler,
+    show_tools, enable_tool, disable_tool, set_tool_confirmation,
+    toggle_tools_handler
 )
 from utils.helpers import file_path
 
@@ -91,6 +93,25 @@ def main():
 
         parser_reset_options = subparsers.add_parser("reset_options", help="Restablecer opciones de Ollama a valores por defecto")
         parser_reset_options.set_defaults(func=reset_options)
+
+        parser_tools = subparsers.add_parser("tools", help="Mostrar herramientas de IA disponibles y su estado")
+        parser_tools.set_defaults(func=show_tools)
+
+        parser_enable_tool = subparsers.add_parser("enable_tool", help="Activar una herramienta de IA")
+        parser_enable_tool.add_argument("-t", "--tool", required=True, help="Nombre de la herramienta")
+        parser_enable_tool.set_defaults(func=enable_tool)
+
+        parser_disable_tool = subparsers.add_parser("disable_tool", help="Desactivar una herramienta de IA")
+        parser_disable_tool.add_argument("-t", "--tool", required=True, help="Nombre de la herramienta")
+        parser_disable_tool.set_defaults(func=disable_tool)
+
+        parser_tool_confirm = subparsers.add_parser("tool_confirm", help="Configurar si una herramienta requiere confirmación previa")
+        parser_tool_confirm.add_argument("-t", "--tool", required=True, help="Nombre de la herramienta")
+        parser_tool_confirm.add_argument("-v", "--value", required=True, help="true para requerir confirmación, false para auto-ejecutar")
+        parser_tool_confirm.set_defaults(func=set_tool_confirmation)
+
+        parser_toggle_tools = subparsers.add_parser("toggle_tools", help="Activar o desactivar el uso de herramientas globalmente")
+        parser_toggle_tools.set_defaults(func=toggle_tools_handler)
 
         args = parser.parse_args()
 

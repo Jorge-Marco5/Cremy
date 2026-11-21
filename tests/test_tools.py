@@ -96,6 +96,28 @@ class TestTools(unittest.TestCase):
         self.assertTrue(self.registry.is_confirmation_required("get_current_datetime", cfg))
         self.assertFalse(self.registry.is_confirmation_required("execute_bash", cfg))
 
+    def test_helpers_tool_config(self):
+        from utils.helpers import get_tools_config, update_tool_setting, toggle_tools_global
+        cfg = get_tools_config()
+        self.assertIn("tools", cfg)
+        self.assertIn("calculator", cfg["tools"])
+
+        update_tool_setting("calculator", enabled=False, require_confirmation=True)
+        updated_cfg = get_tools_config()
+        self.assertFalse(updated_cfg["tools"]["calculator"]["enabled"])
+        self.assertTrue(updated_cfg["tools"]["calculator"]["require_confirmation"])
+
+        # Restaurar
+        update_tool_setting("calculator", enabled=True, require_confirmation=False)
+
+        # Toggle global
+        curr = get_tools_config().get("enabled", True)
+        new_val = toggle_tools_global()
+        self.assertNotEqual(curr, new_val)
+        toggle_tools_global(True)
+        self.assertTrue(get_tools_config()["enabled"])
+
+
 
 if __name__ == "__main__":
     unittest.main()
