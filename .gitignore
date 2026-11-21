@@ -4,5 +4,7 @@ __pycache__
 .env
 config.json
 *.db
-tools/definitions
 extensions.py
+tools/custom/
+tools/definitions/weather_tool.py
+tools/definitions/custom_*
