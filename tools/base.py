@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import asyncio
+import inspect
 from typing import Any, Dict
 
 
@@ -28,13 +30,24 @@ class BaseTool(ABC):
 
     @abstractmethod
     def execute(self, **kwargs) -> Any:
-        """Ejecuta la lógica de la herramienta y retorna un resultado serializable."""
+        """Ejecuta la lógica de la herramienta y retorna un resultado serializable.
+        
+        Puede ser un método síncrono 'def execute' o asíncrono 'async def execute'.
+        """
         pass
 
     def run(self, **kwargs) -> Dict[str, Any]:
-        """Envoltorio seguro para ejecutar la herramienta capturando excepciones."""
+        """Envoltorio seguro para ejecutar la herramienta capturando excepciones.
+        Soporta automáticamente funciones síncronas o corrutinas asíncronas (asyncio).
+        """
         try:
-            result = self.execute(**kwargs)
+            if inspect.iscoroutinefunction(self.execute):
+                result = asyncio.run(self.execute(**kwargs))
+            else:
+                result = self.execute(**kwargs)
+                if inspect.iscoroutine(result):
+                    result = asyncio.run(result)
+
             return {
                 "success": True,
                 "result": result
@@ -44,3 +57,4 @@ class BaseTool(ABC):
                 "success": False,
                 "error": str(e)
             }
+
