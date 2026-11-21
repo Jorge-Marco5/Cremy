@@ -21,8 +21,8 @@ class ReadFileTool(BaseTool):
         },
         "required": ["file_path"]
     }
-    require_confirmation = False
-    enabled_by_default = True
+    require_confirmation = True
+    enabled_by_default = False
 
     def execute(self, **kwargs) -> Dict[str, Any]:
         file_path_str = kwargs.get("file_path", "").strip()

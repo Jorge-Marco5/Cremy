@@ -11,6 +11,10 @@ from core.core_service import (
 )
 from utils.helpers import file_path
 
+from extensions import init_tools
+
+init_tools()
+
 default_data = {
     "url": "http://localhost:11434",
     "model": "ollama",
