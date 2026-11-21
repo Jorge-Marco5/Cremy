@@ -192,30 +192,34 @@ Al reanudar una sesión previa con `python main.py resume`, IAMarker reconstruye
 
 ## Guía: Cómo Crear una Nueva Herramienta
 
-Cada nueva herramienta debe ubicarse en su propio archivo `.py` dentro de `tools/definitions/`.
+En IAMarker puedes crear herramientas bajo dos modalidades según tu objetivo:
+- **Herramientas Oficiales (Built-in)**: Se versionan en Git y forman parte de las herramientas preinstaladas para todos los usuarios.
+- **Herramientas Personales (Locales / Privadas)**: Para tu uso particular, sin que se suban al repositorio de GitHub ni afecten a otros usuarios.
 
-### Paso 1: Crear la clase de la herramienta
+---
 
-Crea el archivo `tools/definitions/mi_herramienta_tool.py`:
+### Paso 1: Definir la Clase de la Herramienta
+
+Crea la clase heredando de `BaseTool`. Por ejemplo, `MiHerramientaTool`:
 
 ```python
 from typing import Any, Dict
 from tools.base import BaseTool
 
 class MiHerramientaTool(BaseTool):
-    # 1. Nombre con el que Ollama identificará la función
+    # 1. Nombre único con el que Ollama identificará la herramienta
     name = "mi_herramienta"
     
     # 2. Descripción clara para que el modelo sepa cuándo invocarla
-    description = "Descripción detallada de la función y su utilidad."
+    description = "Descripción detallada de la función y cuándo debe usarse."
     
-    # 3. Esquema JSON de parámetros (OpenAPI standard)
+    # 3. Esquema JSON de parámetros (estándar OpenAPI/JSON Schema)
     parameters = {
         "type": "object",
         "properties": {
             "parametro_uno": {
                 "type": "string",
-                "description": "Explicación del parámetro."
+                "description": "Explicación del parámetro requerido."
             },
             "opcional": {
                 "type": "integer",
@@ -226,34 +230,110 @@ class MiHerramientaTool(BaseTool):
     }
     
     # 4. Políticas de confirmación y disponibilidad inicial
-    require_confirmation = False  # Cambiar a True si realiza acciones sensibles
-    enabled_by_default = True
+    require_confirmation = False  # True si realiza acciones sensibles (shell, escritura de archivos)
+    enabled_by_default = True     # True para activarla inmediatamente al iniciar
 
     # 5. Lógica de ejecución (síncrona)
     def execute(self, **kwargs) -> Dict[str, Any]:
         param = kwargs.get("parametro_uno")
         # Tu lógica en Python aquí...
         return {
-            "resultado": f"Procesado: {param}"
+            "resultado": f"Procesado exitosamente: {param}"
         }
 ```
 
 > [!TIP]
-> **Soporte para Tareas Asíncronas**:
-> Si tu herramienta necesita realizar llamadas HTTP o tareas I/O asíncronas, simplemente define `async def execute(self, **kwargs) -> Dict[str, Any]:`. La clase base `BaseTool` gestionará el bucle de eventos con `asyncio` automáticamente.
+> **Soporte Nativo para Tareas Asíncronas**:
+> Si tu herramienta necesita realizar peticiones HTTP a APIs externas o tareas I/O asíncronas, simplemente define `async def execute(self, **kwargs) -> Dict[str, Any]:`. La clase base `BaseTool` gestionará el bucle de eventos de `asyncio` automáticamente:
+> ```python
+> import asyncio
+> import urllib.request
+> 
+> class MiHerramientaAsync(BaseTool):
+>     name = "mi_tool_async"
+>     description = "Consulta asíncrona a un servicio externo."
+>     parameters = {"type": "object", "properties": {}, "required": []}
+> 
+>     async def execute(self, **kwargs) -> Dict[str, Any]:
+>         # Petición sin bloquear el hilo principal
+>         data = await asyncio.to_thread(urllib.request.urlopen, "https://api.ejemplo.com/datos")
+>         return {"estado": "ok"}
+> ```
 
-### Paso 2: Registrar la herramienta
+---
 
-En `extensions.py`:
-```python
-from tools.definitions.mi_herramienta_tool import MiHerramientaTool
+### Paso 2: Registrar la Herramienta
 
-def init_tools():
-    """
-    Define tools personalizadas del usuario
-    """
-    registry.register(mi_herramienta_tool())
+Elige una de las dos modalidades según corresponda:
 
+#### Modalidad A: Herramienta Oficial (Built-in en el Repositorio)
+
+1. Guarda el archivo en `tools/definitions/mi_herramienta_tool.py`.
+2. Expórtalo en `tools/definitions/__init__.py`:
+   ```python
+   from tools.definitions.mi_herramienta_tool import MiHerramientaTool
+
+   __all__ = [
+       # ...
+       "MiHerramientaTool",
+   ]
+   ```
+3. Regístralo en `tools/registry.py` dentro de `_register_default_tools()`:
+   ```python
+   def _register_default_tools(self):
+       # ...
+       self.register(MiHerramientaTool())
+   ```
+
+---
+
+#### Modalidad B: Herramienta Personal (Privada / Sin Subir a GitHub)
+
+Para mantener herramientas de uso privado sin que Git las rastree ni suba tus archivos a GitHub:
+
+1. **Ubicación del archivo**:
+   Guarda tu herramienta en cualquiera de estas rutas (ambas están protegidas en `.gitignore`):
+   - Dentro de la carpeta dedicada: `tools/custom/mi_herramienta_tool.py`
+   - O en `tools/definitions/` usando el prefijo `custom_`: `tools/definitions/custom_mi_herramienta.py`
+
+2. **Registro en `extensions.py`**:
+   Crea o edita el archivo `extensions.py` en la raíz del proyecto (este archivo también está protegido en `.gitignore`):
+   ```python
+   from tools.registry import registry
+   from tools.custom.mi_herramienta_tool import MiHerramientaTool
+
+   def init_tools():
+       """Define y carga las tools personalizadas del usuario."""
+       registry.register(MiHerramientaTool())
+   ```
+
+3. **Carga automática y segura**:
+   El archivo `main.py` incluye una importación segura con `try-except`:
+   ```python
+   try:
+       from extensions import init_tools
+       init_tools()
+   except ImportError:
+       pass
+   ```
+   * En tu entorno local: Detectará `extensions.py` y registrará tus herramientas personales automáticamente.
+   * En GitHub o si otros clonan tu repositorio: Al no existir `extensions.py`, continuará funcionando con las herramientas oficiales sin arrojar errores.
+
+---
+
+### Paso 3: Verificar en la CLI
+
+Una vez registrada (sea oficial o personal), IAMarker la incorporará inmediatamente al catálogo:
+
+```bash
+# Ver en la tabla con su estado
+python main.py tools
+
+# Activar o desactivar
+python main.py enable_tool -t mi_herramienta
+python main.py disable_tool -t mi_herramienta
+
+# Cambiar política de confirmación
+python main.py tool_confirm -t mi_herramienta -v true
 ```
 
-¡Listo! La herramienta quedará integrada en el catálogo, sincronizada en `config.json` y lista para ser usada por los modelos compatibles en IAMarker.
