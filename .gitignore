@@ -5,4 +5,4 @@ __pycache__
 config.json
 *.db
 tools/definitions
-extensions
+extensions.py
