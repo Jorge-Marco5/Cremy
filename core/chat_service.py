@@ -212,6 +212,7 @@ def send_chat_request(args, user_input=None, images=None):
 
                 tool_msg = {
                     "role": "tool",
+                    "tool_name": t_name,
                     "content": json.dumps(exec_res, ensure_ascii=False)
                 }
                 context.append(tool_msg)
@@ -219,7 +220,8 @@ def send_chat_request(args, user_input=None, images=None):
                     dataServices.insert_message({
                         "conversation_uuid": args.uuid,
                         "role": "tool",
-                        "content": json.dumps(exec_res, ensure_ascii=False)
+                        "content": json.dumps(exec_res, ensure_ascii=False),
+                        "tool_name": t_name
                     })
 
             # Generar siguiente consulta a Ollama con los resultados de las herramientas

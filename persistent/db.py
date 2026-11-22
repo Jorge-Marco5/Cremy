@@ -55,6 +55,11 @@ class DataService:
         except sqlite3.OperationalError:
             pass
 
+        try:
+            cursor.execute("ALTER TABLE messages ADD COLUMN tool_name TEXT DEFAULT NULL;")
+        except sqlite3.OperationalError:
+            pass
+
         self.conn.commit()
 
     #Configuraciones
@@ -95,7 +100,7 @@ class DataService:
 
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT id, role, content, created_at, images, tool_calls FROM messages WHERE conversation_uuid = ? ORDER BY created_at ASC LIMIT ?",
+            "SELECT id, role, content, created_at, images, tool_calls, tool_name FROM messages WHERE conversation_uuid = ? ORDER BY created_at ASC LIMIT ?",
             (str(uuid), int(limit))
         )
         return cursor.fetchall()
@@ -113,16 +118,22 @@ class DataService:
             import json
             tool_calls_val = json.dumps(tool_calls_val)
 
+        tool_name_val = data.get("tool_name")
+        if isinstance(tool_name_val, (list, dict)):
+            import json
+            tool_name_val = json.dumps(tool_name_val)
+
         cursor.execute("""
             INSERT INTO messages (
-                conversation_uuid, role, content, images, tool_calls
-            ) VALUES (?, ?, ?, ?, ?)
+                conversation_uuid, role, content, images, tool_calls, tool_name
+            ) VALUES (?, ?, ?, ?, ?, ?)
         """, (
             data["conversation_uuid"],
             data["role"],
             data.get("content", ""),
             images_val,
             tool_calls_val,
+            tool_name_val
         ))
 
         self.conn.commit()
