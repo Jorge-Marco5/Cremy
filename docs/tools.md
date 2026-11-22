@@ -161,13 +161,22 @@ python main.py toggle_tools
 
 ---
 
-## Confirmación del Usuario y Seguridad
+## Validación en Tiempo de Ejecución y Seguridad
 
-Por seguridad, las herramientas que interactúan directamente con el sistema operativo (como `execute_bash`) o aquellas configuradas con `"require_confirmation": true` detienen el flujo antes de ejecutarse:
+IAMarker no solo filtra las herramientas al generar los esquemas enviados a Ollama, sino que valida estrictamente cada llamada en el **momento exacto de su ejecución** a través de `registry.execute_tool(...)`:
+
+### 4 Niveles de Validación en Ejecución:
+1. **Sistema Global Habilitado**: Si el sistema de herramientas fue desactivado globalmente (`toggle_tools`), cualquier invocación es abortada de inmediato.
+2. **Existencia en el Registro**: Se comprueba que la herramienta solicitada realmente exista en el catálogo de herramientas registradas.
+3. **Habilitación Individual**: Si la herramienta fue desactivada (`disable_tool`), la llamada se rechaza en seco incluso si el modelo intentara invocarla directamente por su nombre.
+4. **Cumplimiento de la Política de Confirmación**: Si la herramienta requiere confirmación previa (por configuración o por naturaleza sensible), se exige que el usuario haya autorizado explícitamente su ejecución (`[s/n]`).
+
+### Flujo de Confirmación Interactiva:
+Para herramientas sensibles (como `execute_bash`) o configuradas con `"require_confirmation": true`:
 
 1. **Tarjeta de Solicitud**: En consola se presenta un panel estilizado con el nombre de la herramienta y los argumentos exactos enviados por el modelo en formato JSON resaltado con sintaxis oscura:
    ```text
-   ╭─ 🛠️  Llamada a Herramienta: execute_bash ─╮
+   ╭─ 🛠️ Llamada a Herramienta: execute_bash ─╮
    │ {                                        │
    │   "command": "ls -la /tmp"               │
    │ }                                        │
@@ -175,7 +184,8 @@ Por seguridad, las herramientas que interactúan directamente con el sistema ope
    ¿Deseas permitir la ejecución de esta herramienta? [s/n]: 
    ```
 2. **Si el usuario aprueba (`s`)**: La herramienta se ejecuta y su salida se muestra en un panel verde con su respectivo badge.
-3. **Si el usuario deniega (`n`)**: La ejecución se cancela de forma controlada y se envía un mensaje de error informativo al modelo (`"Ejecución denegada por el usuario."`), permitiendo que el LLM comprenda la decisión y responda adecuadamente sin interrumpir la conversación.
+3. **Si el usuario deniega (`n`) o no autoriza**: La ejecución se bloquea en tiempo de ejecución y se envía un mensaje de error informativo al modelo (`"La herramienta '...' requiere confirmación explícita del usuario y no fue autorizada."`), permitiendo que el LLM comprenda la decisión y responda adecuadamente sin interrumpir la conversación.
+
 
 ---
 
