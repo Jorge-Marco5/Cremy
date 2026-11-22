@@ -117,6 +117,68 @@ class TestTools(unittest.TestCase):
         toggle_tools_global(True)
         self.assertTrue(get_tools_config()["enabled"])
 
+    def test_is_tool_enabled(self):
+        cfg = {
+            "enabled": True,
+            "tools": {
+                "calculator": {"enabled": True},
+                "read_file": {"enabled": False}
+            }
+        }
+        self.assertTrue(self.registry.is_tool_enabled("calculator", cfg))
+        self.assertFalse(self.registry.is_tool_enabled("read_file", cfg))
+        self.assertFalse(self.registry.is_tool_enabled("herramienta_fantasma", cfg))
+
+        # Cuando está deshabilitado globalmente
+        cfg_disabled = {"enabled": False, "tools": {"calculator": {"enabled": True}}}
+        self.assertFalse(self.registry.is_tool_enabled("calculator", cfg_disabled))
+
+    def test_execute_tool_runtime_validations(self):
+        # 1. Global deshabilitado
+        cfg_global_off = {"enabled": False}
+        res = self.registry.execute_tool("calculator", {"expression": "2+2"}, tools_config=cfg_global_off)
+        self.assertFalse(res["success"])
+        self.assertIn("deshabilitado", res["error"])
+
+        # 2. Herramienta no existente
+        cfg_ok = {"enabled": True, "tools": {}}
+        res = self.registry.execute_tool("non_existent_tool", {}, tools_config=cfg_ok)
+        self.assertFalse(res["success"])
+        self.assertIn("no encontrada", res["error"])
+
+        # 3. Herramienta deshabilitada individualmente
+        cfg_tool_off = {
+            "enabled": True,
+            "tools": {"calculator": {"enabled": False}}
+        }
+        res = self.registry.execute_tool("calculator", {"expression": "2+2"}, tools_config=cfg_tool_off)
+        self.assertFalse(res["success"])
+        self.assertIn("deshabilitada en la configuración", res["error"])
+
+        # 4. Requiere confirmación y no fue confirmada
+        cfg_confirm = {
+            "enabled": True,
+            "tools": {"calculator": {"enabled": True, "require_confirmation": True}}
+        }
+        res = self.registry.execute_tool("calculator", {"expression": "2+2"}, tools_config=cfg_confirm, confirmed=False)
+        self.assertFalse(res["success"])
+        self.assertIn("no fue autorizada", res["error"])
+
+        # 5. Requiere confirmación y sí fue autorizada
+        res = self.registry.execute_tool("calculator", {"expression": "2+2"}, tools_config=cfg_confirm, confirmed=True)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["result"]["result"], 4)
+
+        # 6. No requiere confirmación
+        cfg_no_confirm = {
+            "enabled": True,
+            "tools": {"calculator": {"enabled": True, "require_confirmation": False}}
+        }
+        res = self.registry.execute_tool("calculator", {"expression": "5 * 4"}, tools_config=cfg_no_confirm, confirmed=False)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["result"]["result"], 20)
+
+
 
 
 if __name__ == "__main__":

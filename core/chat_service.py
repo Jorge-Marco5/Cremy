@@ -193,22 +193,22 @@ def send_chat_request(args, user_input=None, images=None):
                 else:
                     args_dict = {}
 
-                # Verificar si requiere confirmación del usuario
-                needs_confirm = registry.is_confirmation_required(t_name, tools_cfg)
-                if needs_confirm:
-                    allowed = ask_tool_confirmation(t_name, args_dict)
+                # Validar disponibilidad y confirmación en tiempo de ejecución
+                if not registry.is_tool_enabled(t_name, tools_cfg):
+                    exec_res = registry.execute_tool(t_name, args_dict, tools_config=tools_cfg)
+                    render_tool_result(t_name, exec_res.get("error"), is_error=True)
                 else:
-                    allowed = True
-                    print(f"{Fore.CYAN}⚡ [Ejecutando herramienta: {t_name}]{Style.RESET_ALL}")
+                    needs_confirm = registry.is_confirmation_required(t_name, tools_cfg)
+                    if needs_confirm:
+                        confirmed = ask_tool_confirmation(t_name, args_dict)
+                    else:
+                        confirmed = True
+                        print(f"{Fore.CYAN}⚡ [Ejecutando herramienta: {t_name}]{Style.RESET_ALL}")
 
-                if allowed:
-                    exec_res = registry.execute_tool(t_name, args_dict)
+                    exec_res = registry.execute_tool(t_name, args_dict, tools_config=tools_cfg, confirmed=confirmed)
                     is_err = not exec_res.get("success", False)
                     res_display = exec_res.get("result") if not is_err else exec_res.get("error")
                     render_tool_result(t_name, res_display, is_error=is_err)
-                else:
-                    exec_res = {"success": False, "error": "Ejecución denegada por el usuario."}
-                    render_tool_result(t_name, "Ejecución denegada por el usuario.", is_error=True)
 
                 tool_msg = {
                     "role": "tool",

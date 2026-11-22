@@ -29,10 +29,17 @@ class TestChatServiceTools(unittest.TestCase):
             self.assertEqual(payload[0]["role"], "system")
             self.assertEqual(payload[2]["tool_calls"][0]["function"]["name"], "calculator")
 
+    @patch("utils.helpers.get_tools_config")
     @patch("core.chat_service.render_response")
     @patch("core.chat_service.dataServices")
     @patch("core.chat_service.get_config")
-    def test_send_chat_request_tool_loop(self, mock_get_config, mock_dataservices, mock_render_response):
+    def test_send_chat_request_tool_loop(self, mock_get_config, mock_dataservices, mock_render_response, mock_get_tools_cfg):
+        mock_get_tools_cfg.return_value = {
+            "enabled": True,
+            "tools": {
+                "calculator": {"enabled": True, "require_confirmation": False}
+            }
+        }
         # Mock configs
         def mock_config(key):
             if key == "url":
@@ -53,13 +60,6 @@ class TestChatServiceTools(unittest.TestCase):
                 return None
             if key == "options":
                 return {}
-            if key == "tools_config":
-                return {
-                    "enabled": True,
-                    "tools": {
-                        "calculator": {"enabled": True, "require_confirmation": False}
-                    }
-                }
             return None
 
         mock_get_config.side_effect = mock_config
@@ -95,6 +95,56 @@ class TestChatServiceTools(unittest.TestCase):
         self.assertEqual(context[3]["role"], "assistant")
         self.assertIn("50", context[3]["content"])
 
+    @patch("utils.helpers.get_tools_config")
+    @patch("core.chat_service.render_response")
+    @patch("core.chat_service.dataServices")
+    @patch("core.chat_service.get_config")
+    def test_send_chat_request_disabled_tool_blocked(self, mock_get_config, mock_dataservices, mock_render_response, mock_get_tools_cfg):
+        mock_get_tools_cfg.return_value = {
+            "enabled": True,
+            "tools": {
+                "calculator": {"enabled": False, "require_confirmation": False}
+            }
+        }
+        # Herramienta 'calculator' deshabilitada en la configuración
+        def mock_config(key):
+            if key == "url":
+                return "http://localhost:11434"
+            if key == "model":
+                return "qwen2.5:1.5b"
+            if key == "models":
+                return {"qwen2.5:1.5b": {"capabilities": ["completion", "tools"]}}
+            if key == "stream":
+                return False
+            if key == "think":
+                return False
+            if key == "system_prompt":
+                return None
+            if key == "options":
+                return {}
+            return None
+
+        mock_get_config.side_effect = mock_config
+
+        # 1st call devuelve tool call de 'calculator' (a pesar de estar deshabilitada)
+        # 2nd call devuelve respuesta final
+        mock_render_response.side_effect = [
+            ("", 0, [{"function": {"name": "calculator", "arguments": {"expression": "2+2"}}}]),
+            ("No puedo calcularlo porque la herramienta está deshabilitada.", 0, [])
+        ]
+
+        args = argparse.Namespace(model="qwen2.5:1.5b", text="calcula", uuid=None)
+        exit_code = send_chat_request(args)
+        self.assertEqual(exit_code, 0)
+
+        # En el contexto, la respuesta del tool debe indicar error de que está deshabilitada
+        tool_message = context[2]
+        self.assertEqual(tool_message["role"], "tool")
+        tool_content = json.loads(tool_message["content"])
+        self.assertFalse(tool_content["success"])
+        self.assertIn("deshabilitada en la configuración", tool_content["error"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
