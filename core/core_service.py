@@ -17,6 +17,7 @@ from gui.render import render_message
 from persistent.db import DataService
 from gui.render import render_conversation
 from simple_term_menu import TerminalMenu
+from core.command_service import command_service
 
 
 init(autoreset=True)
@@ -26,7 +27,7 @@ dataservice = DataService()
 
 def instant_req(args):
     """
-    Realizar una pregunta rapida a Ollama
+    Realizar una pregunta rapida a Ollama, soportando comandos /command de herramientas y sesión.
     """
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
@@ -34,7 +35,48 @@ def instant_req(args):
 
     args.uuid = None
 
+    if command_service.is_command(args.text):
+        dispatch_res = command_service.dispatch(args.text, args)
+        if dispatch_res.should_exit or dispatch_res.should_skip_model:
+            return dispatch_res.exit_code
+        if dispatch_res.enriched_prompt:
+            return send_chat_request(args, user_input=dispatch_res.enriched_prompt)
+        return dispatch_res.exit_code
+
     return send_chat_request(args)
+
+
+def handle_interactive_chat_turn(req: str, args):
+    """
+    Procesa un turno en el bucle interactivo de chat o continue_chat.
+    Retorna (should_continue: bool, exit_code: int).
+    """
+    stripped = req.strip()
+    if not stripped:
+        return True, 0
+
+    if command_service.is_command(stripped):
+        dispatch_res = command_service.dispatch(stripped, args)
+        if dispatch_res.should_exit:
+            return False, 0
+        if dispatch_res.should_skip_model:
+            return True, dispatch_res.exit_code
+        if dispatch_res.enriched_prompt:
+            prompt_to_send, attached_images = parse_interactive_image_input(dispatch_res.enriched_prompt)
+            if attached_images:
+                code = send_chat_request(args, user_input=prompt_to_send, images=attached_images)
+            else:
+                code = send_chat_request(args, user_input=dispatch_res.enriched_prompt)
+            return True, code
+        return True, dispatch_res.exit_code
+
+    # Entrada normal del usuario
+    prompt, attached_images = parse_interactive_image_input(req)
+    if attached_images:
+        code = send_chat_request(args, user_input=prompt, images=attached_images)
+    else:
+        code = send_chat_request(args, user_input=req)
+    return True, code
 
 
 def chat(args):
@@ -52,25 +94,44 @@ def chat(args):
     # Limpiar el contexto en memoria para una nueva conversación
     clear_context()
 
-    #obtener las 5 primeras palabras del prompt
-    name = " ".join(args.text.split()[:5])
-    model_to_bind = args.model if getattr(args, 'model', None) else get_config("model")
-    args.uuid = dataservice.create_conversation(name, model=model_to_bind)
-    print(f'\nNew Chat - {args.uuid}')
-    exit_code = send_chat_request(args)
-    while exit_code == 0:
-        req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
-        if not req.strip():
-            continue
-        if req in ['exit', '/exit']:
-            render_message("System", "**Saliendo...**")
-            break
-        prompt, attached_images = parse_interactive_image_input(req)
+    initial_input = args.text
+    initial_prompt = initial_input
+
+    # Evaluar si la entrada inicial es un comando slash
+    if command_service.is_command(initial_input):
+        dispatch_res = command_service.dispatch(initial_input, args)
+        if dispatch_res.should_exit:
+            return 0
+        if dispatch_res.should_skip_model:
+            initial_prompt = None
+        elif dispatch_res.enriched_prompt:
+            initial_prompt = dispatch_res.enriched_prompt
+
+    if initial_prompt:
+        name = " ".join(args.text.split()[:5])
+        model_to_bind = args.model if getattr(args, 'model', None) else get_config("model")
+        args.uuid = dataservice.create_conversation(name, model=model_to_bind)
+        print(f'\nNew Chat - {args.uuid}')
+        prompt, attached_images = parse_interactive_image_input(initial_prompt)
         if attached_images:
             exit_code = send_chat_request(args, user_input=prompt, images=attached_images)
         else:
-            exit_code = send_chat_request(args, user_input=req)
-    return 0
+            exit_code = send_chat_request(args, user_input=initial_prompt)
+    else:
+        name = "Nuevo Chat"
+        model_to_bind = args.model if getattr(args, 'model', None) else get_config("model")
+        args.uuid = dataservice.create_conversation(name, model=model_to_bind)
+        print(f'\nNew Chat - {args.uuid}')
+        exit_code = 0
+
+    while exit_code == 0:
+        req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
+        should_continue, exit_code = handle_interactive_chat_turn(req, args)
+        if not should_continue:
+            break
+
+    return exit_code
+
 
 def continue_chat(args):
     """
@@ -130,18 +191,11 @@ def continue_chat(args):
 
     while exit_code == 0:
         req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
-        if not req.strip():
-            continue
-        if req in ["exit", "/exit"]:
-            render_message("System", "**Saliendo...**")
+        should_continue, exit_code = handle_interactive_chat_turn(req, args)
+        if not should_continue:
             break
-        prompt, attached_images = parse_interactive_image_input(req)
-        if attached_images:
-            exit_code = send_chat_request(args, user_input=prompt, images=attached_images)
-        else:
-            exit_code = send_chat_request(args, user_input=req) # args ya tiene el uuid
 
-    return 0
+    return exit_code
 
 def delete_chat(args):
     """

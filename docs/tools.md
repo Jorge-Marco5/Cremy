@@ -161,6 +161,43 @@ python main.py toggle_tools
 
 ---
 
+## ⚡ Comandos Slash (`/command`) en el Prompt
+
+Además de la invocación automática por el modelo (Function Calling), IAMarker permite **ejecutar herramientas manualmente** directamente desde el prompt en las consultas rápidas (`req`), chats nuevos (`chat`) y chats reanudados (`resume`).
+
+### Sintaxis Soportada:
+1. **Ejecución simple:**
+   ```text
+   /<comando_o_alias> <argumentos>
+   ```
+   *Ejemplos:*
+   - `/calc 25 * 4 + 10`
+   - `/datetime`
+   - `/weather Madrid`
+   - `/bash git status`
+   - `/read_file README.md`
+
+2. **Ejecución con instrucción para el modelo (`--`):**
+   ```text
+   /<comando_o_alias> <argumentos> -- <instrucción para el modelo>
+   ```
+   *Ejemplos:*
+   - `/read_file README.md -- Resume los 3 puntos clave del proyecto`
+   - `/calc (1500 * 1.16) - 50 -- ¿Cuánto es el total y cuánto corresponde a impuestos?`
+   - `/weather Tokio -- ¿Qué ropa me recomiendas llevar para este clima?`
+
+3. **Comandos de Control de Sesión:**
+   - `/help`: Muestra la guía interactiva de comandos, alias y ejemplos.
+   - `/tools`: Muestra la tabla de herramientas registradas y su estado.
+   - `/clear`: Limpia el historial en memoria de la conversación activa.
+   - `/model [nombre]`: Consulta o cambia temporalmente el modelo en el chat.
+   - `/exit`: Termina la sesión interactiva.
+
+### Alias y Escalabilidad:
+Cada herramienta define sus propios alias en su clase (`aliases = [...]`) y su argumento primario (`primary_arg = "..."`). Al registrar cualquier herramienta nueva en `ToolRegistry`, queda disponible de inmediato como comando slash sin necesidad de modificar el código central de IAMarker.
+
+---
+
 ## Validación en Tiempo de Ejecución y Seguridad
 
 IAMarker no solo filtra las herramientas al generar los esquemas enviados a Ollama, sino que valida estrictamente cada llamada en el **momento exacto de su ejecución** a través de `registry.execute_tool(...)`:
