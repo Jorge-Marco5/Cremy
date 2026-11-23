@@ -10,6 +10,8 @@ import sys
 import os
 from halo import Halo
 from colorama import init, Fore, Style
+import questionary
+from prompt_toolkit.shortcuts import CompleteStyle
 from utils.helpers import get_config, write_config, parse_option_value, parse_interactive_image_input, encode_image, format_bytes
 from utils.format_time import format_duration
 from core.chat_service import send_chat_request, clear_context, context
@@ -18,6 +20,7 @@ from persistent.db import DataService
 from gui.render import render_conversation
 from simple_term_menu import TerminalMenu
 from core.command_service import command_service
+from tools.registry import registry
 
 
 init(autoreset=True)
@@ -29,21 +32,39 @@ def instant_req(args):
     """
     Realizar una pregunta rapida a Ollama, soportando comandos /command de herramientas y sesión.
     """
+    req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
+
+    args.text = req
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
 
     args.uuid = None
 
-    if command_service.is_command(args.text):
-        dispatch_res = command_service.dispatch(args.text, args)
-        if dispatch_res.should_exit or dispatch_res.should_skip_model:
-            return dispatch_res.exit_code
-        if dispatch_res.enriched_prompt:
-            return send_chat_request(args, user_input=dispatch_res.enriched_prompt)
-        return dispatch_res.exit_code
+    stripped = req.strip()
+    if not stripped:
+        return True, 0
 
-    return send_chat_request(args)
+    if command_service.is_command(stripped):
+        dispatch_res = command_service.dispatch(stripped, args)
+        if dispatch_res.should_exit:
+            return False, 0
+        if dispatch_res.should_skip_model:
+            return True, dispatch_res.exit_code
+        if dispatch_res.enriched_prompt:
+            prompt_to_send, attached_images = parse_interactive_image_input(dispatch_res.enriched_prompt)
+            if attached_images:
+                code = send_chat_request(args, user_input=prompt_to_send, images=attached_images)
+            else:
+                code = send_chat_request(args, user_input=dispatch_res.enriched_prompt)
+            return True, code
+
+    # Entrada normal del usuario
+    prompt, attached_images = parse_interactive_image_input(req)
+    if attached_images:
+        code = send_chat_request(args, user_input=prompt, images=attached_images)
+    else:
+        code = send_chat_request(args, user_input=req)
 
 
 def handle_interactive_chat_turn(req: str, args):
@@ -83,6 +104,9 @@ def chat(args):
     """
     Iniciar una conversacion con un modelo de IA local usando Ollama
     """
+    req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
+    
+    args.text = req
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
@@ -125,7 +149,7 @@ def chat(args):
         exit_code = 0
 
     while exit_code == 0:
-        req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
+        req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
         should_continue, exit_code = handle_interactive_chat_turn(req, args)
         if not should_continue:
             break
@@ -190,7 +214,7 @@ def continue_chat(args):
     exit_code = 0
 
     while exit_code == 0:
-        req = input(f"\n{Fore.YELLOW}{Style.BRIGHT}Usuario: {Style.RESET_ALL}")
+        req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
         should_continue, exit_code = handle_interactive_chat_turn(req, args)
         if not should_continue:
             break

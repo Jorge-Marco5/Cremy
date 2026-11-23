@@ -45,16 +45,16 @@ def main():
         subparsers = parser.add_subparsers(title="Funciones", dest="comando", help="Subcomandos disponibles")
 
         parser_question = subparsers.add_parser("req", help="Realizar consulta rapida a un modelo de IA local")
-        parser_question.add_argument("-t", "--text", help="Agrega tu pregunta envuelta en ' '")
+        #parser_question.add_argument("-t", "--text", help="Agrega tu pregunta envuelta en ' '")
         parser_question.add_argument("-m", "--model", help="Nombre del modelo", nargs='?')
-        parser_question.add_argument("-i", "--image", nargs="+", help="Ruta de una o más imágenes para modelos multimodales")
+        #parser_question.add_argument("-i", "--image", nargs="+", help="Ruta de una o más imágenes para modelos multimodales")
         add_options_arguments(parser_question)
         parser_question.set_defaults(func=instant_req)
 
         parser_init_chat = subparsers.add_parser("chat", help="Iniciar un nuevo chat")
-        parser_init_chat.add_argument("-t", "--text", help="Agrega tu pregunta envuelta en ' '")
+        #parser_init_chat.add_argument("-t", "--text", help="Agrega tu pregunta envuelta en ' '")
         parser_init_chat.add_argument("-m", "--model", help="Nombre del modelo", nargs='?')
-        parser_init_chat.add_argument("-i", "--image", nargs="+", help="Ruta de una o más imágenes para modelos multimodales")
+        #parser_init_chat.add_argument("-i", "--image", nargs="+", help="Ruta de una o más imágenes para modelos multimodales")
         add_options_arguments(parser_init_chat)
         parser_init_chat.set_defaults(func=chat)
 

@@ -32,6 +32,7 @@ class CommandService:
         "tools": "Muestra el estado detallado de las herramientas del sistema.",
         "clear": "Limpia el contexto de la conversación en memoria.",
         "model": "Muestra o cambia temporalmente el modelo activo en la sesión.",
+        "image": "(/img) Envia una imagen al modelo de IA para su analisis",
         "exit": "Termina la sesión interactiva.",
     }
 
@@ -47,6 +48,20 @@ class CommandService:
         if stripped.lower() in ["exit", "quit"]:
             return True
         return False
+    
+    def list_all_commands(self):
+        """Obtiene la lista completa de todos los comandos del sistema"""
+        list_tools = []
+
+        for cmd, desc in command_service.SESSION_COMMANDS.items():
+            list_tools.append(f"/{cmd}")
+
+        for tool in registry.list_tools():
+            aliases = getattr(tool, "aliases", [])
+            for a in aliases:
+                list_tools.append(f"/{a}")
+
+        return list_tools
 
     def parse_command_input(self, raw_input: str) -> Tuple[str, str, Optional[str]]:
         """Parsea la entrada del usuario extrayendo:
@@ -324,7 +339,7 @@ class CommandService:
             from core.core_service import show_tools
             show_tools(args)
             return CommandDispatchResult(is_command=True, handled=True, should_skip_model=True)
-
+        
         if cmd == "clear":
             clear_context()
             print(f"\n{Fore.GREEN}{Style.BRIGHT}✓ Contexto de la conversación en memoria limpiado exitosamente.{Style.RESET_ALL}\n")
@@ -355,7 +370,7 @@ class CommandService:
         cmd_name, tool_args_str, user_prompt = self.parse_command_input(raw_input)
 
         # 1. Comprobar si es un comando de sesión (/help, /tools, /clear, /model, /exit)
-        if cmd_name in self.SESSION_COMMANDS or cmd_name in ["quit"]:
+        if cmd_name in self.SESSION_COMMANDS or cmd_name in ["quit", "img"]:
             return self.handle_session_command(cmd_name, tool_args_str, args)
 
         # 2. Comprobar si corresponde a una herramienta registrada
