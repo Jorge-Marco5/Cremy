@@ -5,6 +5,8 @@ from tools.base import BaseTool
 
 class BashTool(BaseTool):
     name = "execute_bash"
+    aliases = ["bash", "sh", "cmd", "exec"]
+    primary_arg = "command"
     description = "Ejecuta un comando en la shell Bash de Linux y devuelve la salida estándar y de error."
     parameters = {
         "type": "object",

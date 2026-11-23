@@ -5,6 +5,8 @@ from tools.base import BaseTool
 
 class DateTimeTool(BaseTool):
     name = "get_current_datetime"
+    aliases = ["datetime", "date", "time", "hora", "fecha"]
+    primary_arg = "format"
     description = "Obtiene la fecha y hora actual del sistema local."
     parameters = {
         "type": "object",

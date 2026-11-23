@@ -6,6 +6,8 @@ from tools.base import BaseTool
 
 class ReadFileTool(BaseTool):
     name = "read_file"
+    aliases = ["read", "cat"]
+    primary_arg = "file_path"
     description = "Lee el contenido de un archivo de texto en el sistema de archivos local."
     parameters = {
         "type": "object",

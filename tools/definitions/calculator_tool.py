@@ -6,6 +6,8 @@ from tools.base import BaseTool
 
 class CalculatorTool(BaseTool):
     name = "calculator"
+    aliases = ["calc"]
+    primary_arg = "expression"
     description = "Evalúa de forma segura expresiones matemáticas (suma, resta, multiplicación, división, potencias, etc.)."
     parameters = {
         "type": "object",

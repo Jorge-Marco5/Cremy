@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import asyncio
 import inspect
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 
 class BaseTool(ABC):
@@ -12,6 +12,8 @@ class BaseTool(ABC):
     parameters: Dict[str, Any] = {}
     require_confirmation: bool = False
     enabled_by_default: bool = True
+    aliases: List[str] = []
+    primary_arg: Optional[str] = None
 
     def to_ollama_tool(self) -> Dict[str, Any]:
         """Convierte la definición de la herramienta al formato compatible con la API de Ollama."""
