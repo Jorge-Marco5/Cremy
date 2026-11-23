@@ -32,9 +32,11 @@ def instant_req(args):
     """
     Realizar una pregunta rapida a Ollama, soportando comandos /command de herramientas y sesión.
     """
-    req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
-
-    args.text = req
+    if not getattr(args, "text", None):
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True).ask()
+        args.text = req
+    else:
+        req = args.text
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1
@@ -43,28 +45,38 @@ def instant_req(args):
 
     stripped = req.strip()
     if not stripped:
-        return True, 0
+        return 0
+
+    # Soporte para comandos de imagen interactiva (/image o /img)
+    if stripped.startswith(("/image", "/img")):
+        prompt, attached_images = parse_interactive_image_input(req)
+        if attached_images:
+            return send_chat_request(args, user_input=prompt, images=attached_images)
+        else:
+            print(f"{Fore.YELLOW}Uso: {Fore.CYAN}/image <ruta_de_imagen> [pregunta opcional]{Style.RESET_ALL}")
+            return 1
 
     if command_service.is_command(stripped):
         dispatch_res = command_service.dispatch(stripped, args)
         if dispatch_res.should_exit:
-            return False, 0
+            return 0
         if dispatch_res.should_skip_model:
-            return True, dispatch_res.exit_code
+            return dispatch_res.exit_code
         if dispatch_res.enriched_prompt:
             prompt_to_send, attached_images = parse_interactive_image_input(dispatch_res.enriched_prompt)
             if attached_images:
-                code = send_chat_request(args, user_input=prompt_to_send, images=attached_images)
+                return send_chat_request(args, user_input=prompt_to_send, images=attached_images)
             else:
-                code = send_chat_request(args, user_input=dispatch_res.enriched_prompt)
-            return True, code
+                return send_chat_request(args, user_input=dispatch_res.enriched_prompt)
+        if dispatch_res.handled:
+            return dispatch_res.exit_code
 
     # Entrada normal del usuario
     prompt, attached_images = parse_interactive_image_input(req)
     if attached_images:
-        code = send_chat_request(args, user_input=prompt, images=attached_images)
+        return send_chat_request(args, user_input=prompt, images=attached_images)
     else:
-        code = send_chat_request(args, user_input=req)
+        return send_chat_request(args, user_input=req)
 
 
 def handle_interactive_chat_turn(req: str, args):
@@ -76,6 +88,16 @@ def handle_interactive_chat_turn(req: str, args):
     if not stripped:
         return True, 0
 
+    # Soporte para comandos de imagen interactiva (/image o /img)
+    if stripped.startswith(("/image", "/img")):
+        prompt, attached_images = parse_interactive_image_input(req)
+        if attached_images:
+            code = send_chat_request(args, user_input=prompt, images=attached_images)
+            return True, code
+        else:
+            print(f"{Fore.YELLOW}Uso: {Fore.CYAN}/image <ruta_de_imagen> [pregunta opcional]{Style.RESET_ALL}")
+            return True, 0
+
     if command_service.is_command(stripped):
         dispatch_res = command_service.dispatch(stripped, args)
         if dispatch_res.should_exit:
@@ -89,7 +111,8 @@ def handle_interactive_chat_turn(req: str, args):
             else:
                 code = send_chat_request(args, user_input=dispatch_res.enriched_prompt)
             return True, code
-        return True, dispatch_res.exit_code
+        if dispatch_res.handled:
+            return True, dispatch_res.exit_code
 
     # Entrada normal del usuario
     prompt, attached_images = parse_interactive_image_input(req)
@@ -104,9 +127,11 @@ def chat(args):
     """
     Iniciar una conversacion con un modelo de IA local usando Ollama
     """
-    req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
-    
-    args.text = req
+    if not getattr(args, "text", None):
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True).ask()
+        args.text = req
+    else:
+        req = args.text
     if not args.text or not args.text.strip():
         print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
         return 1

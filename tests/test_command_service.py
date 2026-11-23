@@ -219,6 +219,25 @@ class TestCoreServiceCommandIntegration(unittest.TestCase):
         user_input_arg = mock_send_req.call_args[1].get("user_input")
         self.assertIn('"result": 25', user_input_arg)
 
+    @patch("core.core_service.send_chat_request")
+    def test_handle_interactive_chat_turn_image_command(self, mock_send_req):
+        mock_send_req.return_value = 0
+        args = argparse.Namespace()
+        should_continue, code = handle_interactive_chat_turn("/image test.png ¿Qué hay aquí?", args)
+
+        self.assertTrue(should_continue)
+        self.assertEqual(code, 0)
+        mock_send_req.assert_called_once_with(args, user_input="¿Qué hay aquí?", images=["test.png"])
+
+    @patch("core.core_service.send_chat_request")
+    def test_handle_interactive_chat_turn_image_without_path(self, mock_send_req):
+        args = argparse.Namespace()
+        should_continue, code = handle_interactive_chat_turn("/image", args)
+
+        self.assertTrue(should_continue)
+        self.assertEqual(code, 0)
+        mock_send_req.assert_not_called()
+
     def test_handle_interactive_chat_turn_exit(self):
         args = argparse.Namespace()
         should_continue, code = handle_interactive_chat_turn("/exit", args)
