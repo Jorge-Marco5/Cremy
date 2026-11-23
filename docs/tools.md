@@ -113,7 +113,7 @@ IAMarker/
 
 ---
 
-## 🛠️ Herramientas Integradas por Defecto
+## Herramientas Integradas por Defecto
 
 | Herramienta | Nombre Interno | Confirmación | Estado por Defecto | Descripción |
 | :--- | :--- | :---: | :---: | :--- |
@@ -161,7 +161,7 @@ python main.py toggle_tools
 
 ---
 
-## ⚡ Comandos Slash (`/command`) en el Prompt
+## Comandos Slash (`/command`) en el Prompt
 
 Además de la invocación automática por el modelo (Function Calling), IAMarker permite **ejecutar herramientas manualmente** directamente desde el prompt en las consultas rápidas (`req`), chats nuevos (`chat`) y chats reanudados (`resume`).
 
@@ -256,11 +256,14 @@ from tools.base import BaseTool
 class MiHerramientaTool(BaseTool):
     # 1. Nombre único con el que Ollama identificará la herramienta
     name = "mi_herramienta"
-    
-    # 2. Descripción clara para que el modelo sepa cuándo invocarla
+    # 2. Alias para invocar la herramienta rapidamente desde el chat por comando '/comm'
+    aliases = ["comm"]
+    # 3. Argumento que recibe la herramienta al invocar por comando '/comm <argumento>'
+    primary_arg = "argumento"
+    # 4. Descripción clara para que el modelo sepa cuándo invocarla
     description = "Descripción detallada de la función y cuándo debe usarse."
     
-    # 3. Esquema JSON de parámetros (estándar OpenAPI/JSON Schema)
+    # 5. Esquema JSON de parámetros (estándar OpenAPI/JSON Schema)
     parameters = {
         "type": "object",
         "properties": {
