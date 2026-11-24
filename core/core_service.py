@@ -27,13 +27,24 @@ init(autoreset=True)
 
 dataservice = DataService()
 
+from questionary import Style
+
+custom_style = Style([
+    ("question", "fg:#89b4fa bold"),
+    ("answer", "fg:#a6e3a1 bold"),
+    ("pointer", "fg:#cba6f7 bold"),
+    ("highlighted", "fg:#f38ba8 bold"),
+    ("completion-menu", "bg:#1e1e2e fg:#cdd6f4"),
+    ("completion-menu.completion", "bg:#1e1e2e fg:#cdd6f4"),
+    ("completion-menu.completion.current", "bg:#45475a fg:#f5c2e7 bold"),
+])
 
 def instant_req(args):
     """
     Realizar una pregunta rapida a Ollama, soportando comandos /command de herramientas y sesión.
     """
     if not getattr(args, "text", None):
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True).ask()
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=custom_style).ask()
         args.text = req
     else:
         req = args.text
