@@ -94,6 +94,19 @@ class TestTheme(unittest.TestCase):
         self.assertIsNotNone(console)
         self.assertTrue(hasattr(console, "_theme_stack"))
 
+    def test_render_banner_executes_cleanly(self):
+        import io
+        from unittest.mock import patch
+        from gui.render import render_banner
+
+        captured_out = io.StringIO()
+        with patch("sys.stdout", captured_out):
+            render_banner()
+
+        output = captured_out.getvalue()
+        self.assertIn("●", output)
+        self.assertTrue(output.endswith("\n"))
+
 
 if __name__ == "__main__":
     unittest.main()

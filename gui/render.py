@@ -31,41 +31,72 @@ dataService = DataService()
 
 def render_banner(args = ''):
     """
-    Construccion del banner
+    Construcción y renderizado del banner principal en Catppuccin Mocha
     """
-    #Configuracion de colores
-    c = ansi_hex(CatppuccinMocha.ROSEWATER, bold=True)#crema
-    r = ansi_hex(CatppuccinMocha.RED, bold=True)
-    p = ansi_hex(CatppuccinMocha.PEACH, bold=True)
-    y = ansi_hex(CatppuccinMocha.YELLOW, bold=True)
-    g = ansi_hex(CatppuccinMocha.GREEN, bold=True)
-    b = ansi_hex(CatppuccinMocha.BLUE, bold=True)
+    # Capas de color para la mascota
+    c_body = ansi_hex(CatppuccinMocha.ROSEWATER)
+    c_crest = ansi_hex(CatppuccinMocha.TEXT, bold=True)
+    c_eyes = ansi_hex(CatppuccinMocha.TEXT, bold=True)
+    c_mouth = ansi_hex(CatppuccinMocha.PINK, bold=True)
+    c_blush = ansi_hex(CatppuccinMocha.MAROON, bold=True)
+    c_base = ansi_hex(CatppuccinMocha.OVERLAY2)
 
-    print(f"""                           
-{c}                      @:.                      
-{c}                      @. @                    
-{c}                     @....@                   
-{c}                  .@.......@                  
-{c}               .@..........@                  
-{c}              @............@:@@               
-{c}            @..............@....@.            
-{c}           @................*@....@           {r}   /@@@@@@@{p}   /@@@@@@ {y}   /@@@@@@ {g}  /@@@@@@/@@@@  {b}/@@   /@@
-{c}          :@......................@           {r}  /@@_____/{p}  /@@__  @@{y}  /@@__  @@{g} | @@_  @@_  @@|{b} @@  | @@
-{c}        @...@...:@@@......:@@@@...@.          {r} | @@      {p} | @@  \__/{y} | @@@@@@@@{g} | @@ \ @@ \ @@|{b} @@  | @@
-{c}       @.......%@@  @.....@@@  @.....@        {r} | @@      {p} | @@  \__/{y} | @@@@@@@@{g} | @@ \ @@ \ @@|{b} @@  | @@
-{c}       @.......%@@@@@.....@@@@@@......@       {r} | @@      {p} | @@      {y} | @@_____/{g} | @@ | @@ | @@|{b} @@  | @@
-{c}      :@.............-=_=-.........+@.@       {r} |  @@@@@@@{p} | @@      {y} |  @@@@@@@{g} | @@ | @@ | @@|{b}  @@@@@@@
-{c}     @..@.......:.............:........@      {r}  \_______/{p} |__/      {y}  \_______/{g} |__/ |__/ |__/ {b}\____  @@
-{c}    @.....@..............................@    {r}                                                {g}{b} /@@  | @@
-{c}    @.......:@...........................@    {r}                                                {g}{b}|  @@@@@@/
-{c}    @...........................@.......@     {r}                                                {g}{b} \______/ 
-{c}     @............................@....@      
-{c}       '@@======...................@@@        
-{c}            @@@@====_________===@@@:            
-                       
-    """)
-    
-    print(f"""{ansi_hex(CatppuccinMocha.CRUST)}█{ansi_hex(CatppuccinMocha.MANTLE)}█{ansi_hex(CatppuccinMocha.BASE)}█{ansi_hex(CatppuccinMocha.SURFACE0)}█{ansi_hex(CatppuccinMocha.SURFACE1)}█{ansi_hex(CatppuccinMocha.SURFACE2)}█{ansi_hex(CatppuccinMocha.OVERLAY0)}█{ansi_hex(CatppuccinMocha.OVERLAY1)}█{ansi_hex(CatppuccinMocha.OVERLAY2)}█{ansi_hex(CatppuccinMocha.SUBTEXT0)}█{ansi_hex(CatppuccinMocha.SUBTEXT1)}█{ansi_hex(CatppuccinMocha.TEXT)}█{ansi_hex(CatppuccinMocha.LAVENDER)}█{ansi_hex(CatppuccinMocha.BLUE)}█{ansi_hex(CatppuccinMocha.SAPPHIRE)}█{ansi_hex(CatppuccinMocha.SKY)}█{ansi_hex(CatppuccinMocha.TEAL)}█{ansi_hex(CatppuccinMocha.GREEN)}█{ansi_hex(CatppuccinMocha.YELLOW)}█{ansi_hex(CatppuccinMocha.PEACH)}█{ansi_hex(CatppuccinMocha.MAROON)}█{ansi_hex(CatppuccinMocha.RED)}█{ansi_hex(CatppuccinMocha.MAUVE)}█{ansi_hex(CatppuccinMocha.PINK)}█{ansi_hex(CatppuccinMocha.FLAMINGO)}█{ansi_hex(CatppuccinMocha.ROSEWATER)}█\n""")
+    # texto
+    c1 = ansi_hex(CatppuccinMocha.MAUVE, bold=True)
+    c2 = ansi_hex(CatppuccinMocha.PINK, bold=True)
+    c3 = ansi_hex(CatppuccinMocha.BLUE, bold=True)
+    c4 = ansi_hex(CatppuccinMocha.TEAL, bold=True)
+    c5 = ansi_hex(CatppuccinMocha.GREEN, bold=True)
+
+    # Subtítulo y divisores
+    c_sub = ansi_hex(CatppuccinMocha.SUBTEXT0)
+    c_mut = ansi_hex(CatppuccinMocha.OVERLAY0)
+    c_div = ansi_hex(CatppuccinMocha.SURFACE1)
+
+    banner_lines = [
+        f"{c_crest}                      @:.                      {C_RESET}",
+        f"{c_crest}                      @. @                    {C_RESET}",
+        f"{c_crest}                     @....@                   {C_RESET}",
+        f"{c_crest}                  .@.......@                  {C_RESET}",
+        f"{c_body}               .@..........@                  {C_RESET}",
+        f"{c_body}              @............{c_crest}@:@@               {C_RESET}",
+        f"{c_body}            @..............{c_crest}@....@.            {C_RESET}",
+        f"{c_body}           @................*{c_crest}@....@           {C_RESET}{c1}   /@@@@@@@{c2}   /@@@@@@ {c3}   /@@@@@@ {c4}  /@@@@@@/@@@@  {c5}/@@   /@@{C_RESET}",
+        f"{c_body}          :@......................@           {C_RESET}{c1}  /@@_____/{c2}  /@@__  @@{c3}  /@@__  @@{c4} | @@_  @@_  @@|{c5} @@  | @@{C_RESET}",
+        f"{c_body}        @...@...{c_eyes}:@@@{c_body}......{c_eyes}:@@@@{c_body}...@.          {C_RESET}{c1} | @@      {c2} | @@  \\__/{c3} | @@@@@@@@{c4} | @@ \\ @@ \\ @@|{c5} @@  | @@{C_RESET}",
+        f"{c_body}       @.......{c_eyes}%@@  @{c_body}.....{c_eyes}@@@  @{c_body}.....@        {C_RESET}{c1} | @@      {c2} | @@  \\__/{c3} | @@@@@@@@{c4} | @@ \\ @@ \\ @@|{c5} @@  | @@{C_RESET}",
+        f"{c_body}       @.......{c_eyes}%@@@@@{c_body}.....{c_eyes}@@@@@@{c_body}......@       {C_RESET}{c1} | @@      {c2} | @@      {c3} | @@_____/{c4} | @@ | @@ | @@|{c5} @@  | @@{C_RESET}",
+        f"{c_body}      :@...........................+@.@       {C_RESET}{c1} |  @@@@@@@{c2} | @@      {c3} |  @@@@@@@{c4} | @@ | @@ | @@|{c5}  @@@@@@@{C_RESET}",
+        f"{c_body}     @..@.......{c_blush}#{C_RESET}.............{c_blush}#{C_RESET}........@      {C_RESET}{c1}  \\_______/{c2} |__/      {c3}  \\_______/{c4} |__/ |__/ |__/ {c5}\\____  @@{C_RESET}",
+        f"{c_body}    @.....@..............................@    {C_RESET}                                                {c5} /@@  | @@{C_RESET}",
+        f"{c_body}    @.......:@...........................@   {C_RESET}{C_RESET}                                                 {c5}|  @@@@@@/{C_RESET}",
+        f"{c_body}    @...........................@.......@     {C_RESET}                                                 {c5}\\______/ {C_RESET}",
+        f"{c_body}     @............................@....@      {C_RESET}",
+        f"{c_base}       '@@======...................@@@        {C_RESET}",
+        f"{c_base}            @@@@====_________===@@@:            {C_RESET}",
+    ]
+
+    accents = [
+        CatppuccinMocha.RED,
+        CatppuccinMocha.MAROON,
+        CatppuccinMocha.PEACH,
+        CatppuccinMocha.FLAMINGO,
+        CatppuccinMocha.YELLOW,
+        CatppuccinMocha.ROSEWATER,
+        CatppuccinMocha.GREEN,
+        CatppuccinMocha.TEAL,
+        CatppuccinMocha.SKY,
+        CatppuccinMocha.SAPPHIRE,
+        CatppuccinMocha.BLUE,
+        CatppuccinMocha.LAVENDER,
+        CatppuccinMocha.MAUVE,
+        CatppuccinMocha.PINK,
+    ]
+    dots = " ".join(f"{ansi_hex(c)}●{C_RESET}" for c in accents)
+    div_bar = f"{c_div}{'─' * 36}{C_RESET}"
+    palette_line = f"   {div_bar} {dots} {div_bar}\n"
+
+    print("\n" + "\n".join(banner_lines) + "\n" + palette_line)
 
 
 def render_response(agent: str, req: urllib.request.Request, stream: bool):
