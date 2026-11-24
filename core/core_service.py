@@ -10,6 +10,7 @@ import os
 from halo import Halo
 from colorama import init, Fore, Style
 import questionary
+from questionary import Choice
 from prompt_toolkit.shortcuts import CompleteStyle
 from utils.helpers import get_config, write_config, parse_option_value, parse_interactive_image_input, encode_image, format_bytes
 from utils.format_time import format_duration
@@ -17,7 +18,6 @@ from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
 from persistent.db import DataService
 from gui.render import render_conversation, render_banner
-from simple_term_menu import TerminalMenu
 from core.command_service import command_service
 from tools.registry import registry
 from gui.theme import (
@@ -284,43 +284,17 @@ def select_conversation():
     Seleccionar una conversacion guardada en la base de datos y retornar UUID
     """
     conversations = dataservice.show_all()
-    #diccionario de conversaciones
-    conversations_dict = {}
-    if not conversations:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No hay conversaciones guardadas.{Style.RESET_ALL}")
-        return 1
-    for conversation in conversations:
-        model_tag = f" [{conversation[3]}]" if len(conversation) > 3 and conversation[3] else ""
-        conversations_dict[f"{conversation[0]} - {conversation[1]}{model_tag}"] = conversation[0]
 
-    if not conversations_dict:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No hay conversaciones guardadas.{Style.RESET_ALL}")
-        return 1
-    
-    textos_menu = list(conversations_dict.keys())
-    terminal_menu = TerminalMenu(textos_menu, title="Seleccione una conversación")
-    menu_entry_index = terminal_menu.show()
+    choices = [
+        Choice(
+            title=f"{conversation[0]} - {conversation[1]} [{conversation[3]}]",   
+            value=conversation[0]
+        )
+        for conversation in conversations
+    ]
 
-    if menu_entry_index is None:
-        print("Operación cancelada.")
-        return 1
+    uuid = questionary.select("Selecciona un modelo:", choices=choices).ask()
 
-    if isinstance(menu_entry_index, (tuple, list)):
-        sel_index = menu_entry_index[0] if menu_entry_index else None
-    else:
-        sel_index = menu_entry_index
-
-    if sel_index is None:
-        print("Operación cancelada.")
-        return 1
-
-    try:
-        sel_index = int(sel_index)
-    except (TypeError, ValueError):
-        print(f"Índice de selección inválido: {sel_index}")
-        return 1
-
-    uuid = conversations_dict[textos_menu[sel_index]]
     return uuid
 
 
