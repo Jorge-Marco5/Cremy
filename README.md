@@ -102,9 +102,14 @@ pip install -r requirements.txt
   Realizar una pregunta rapida al modelo de ia y te retorna una respuesta sin tener una conversacion o guardar contexto
 
   ```
-  python main.py req -t 'tu pregunta'
+  python main.py req ↩️
+
+  Usuario: Escribe tu pregunta
+  ---
   # Ejemplo
-  python main.py req -t '¿Por que el cielo es azul?'
+  python main.py req ↩️
+  
+  Usuario: ¿Por que el cielo es azul?
   ```
 
   **Incluir un modelo en especifico**
@@ -112,9 +117,14 @@ pip install -r requirements.txt
   Puedes usar un modelo especifico diferente al default siempre y cuando esté instalado en tu servidor
 
   ```
-  python main.py req -t 'tu pregunta' -m <tu-otro-modelo>
+  python main.py req -m <tu-otro-modelo> ↩️
+
+  Usuario: Escribe tu pregunta
+  ---
   # Ejemplo
-  python main.py req -t '¿Por que el cielo es azul?' -m <gemma4:12b>
+  python main.py req -m <gemma4:12b> ↩️
+
+  Usuario: ¿Porque el cielo es azul?
   ```
 
 - ### Iniciar una conversacion con un modelo de IA
@@ -122,9 +132,14 @@ pip install -r requirements.txt
   Inicia una conversacion con un modelo de IA de forma persistente en el sistema en el cual el modelo puede trabajar en base a el contexto de la conversacion
 
   ```
-  python main.py chat -t 'tu pregunta'
+  python main.py chat ↩️
+
+  Usuario: Escribe tu pregunta
+  ---
   # Ejemplo
-  python main.py chat -t '¿Por que el cielo es azul?'
+  python main.py chat ↩️
+  
+  User: ¿Por que el cielo es azul?
   ```
 
   **Incluir un modelo en especifico**
@@ -133,9 +148,14 @@ pip install -r requirements.txt
   - solo puedes cambiar el modelo saliendo del chat e ingresando nuevamente seleccionando la conversacion en la que estabas trabajando
 
   ```
-  python main.py chat -t 'tu pregunta' -m <tu-otro-modelo>
+  python main.py chat -m <tu-otro-modelo> ↩️
+  
+  Usuario: Escribe tu pregunta
+  ---
   # Ejemplo
-  python main.py chat -t '¿Por que el cielo es azul?' -m <gemma4:12b>
+  python main.py chat -m <gemma4:12b> ↩️
+
+  Usuario: ¿Por que el cielo es azul?
   ```
 
 - ### Seleccionar una conversacion

@@ -196,6 +196,15 @@ Además de la invocación automática por el modelo (Function Calling), IAMarker
 ### Alias y Escalabilidad:
 Cada herramienta define sus propios alias en su clase (`aliases = [...]`) y su argumento primario (`primary_arg = "..."`). Al registrar cualquier herramienta nueva en `ToolRegistry`, queda disponible de inmediato como comando slash sin necesidad de modificar el código central de IAMarker.
 
+Al ingresar el primer caracter en el input, abre un autocompletado con la lista completa de todas los comandos y herramientas del sistema listos para usar.
+
+### Ejemplo de uso
+```
+python main.py req ↩️
+
+Usuario: /read /ruta/del/archivo/README.md -- Explicame el contenido del README
+````
+
 ---
 
 ## Validación en Tiempo de Ejecución y Seguridad
