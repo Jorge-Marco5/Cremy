@@ -1,4 +1,3 @@
-from rich.console import Console
 from rich.markdown import Markdown
 from rich.live import Live
 from rich.syntax import Syntax
@@ -21,35 +20,39 @@ from gui.render import render_conversation
 from simple_term_menu import TerminalMenu
 from core.command_service import command_service
 from tools.registry import registry
+from gui.theme import (
+    CatppuccinMocha,
+    C_ASSISTANT,
+    C_ERROR,
+    C_INFO,
+    C_MUTED,
+    C_RESET,
+    C_SUCCESS,
+    C_SYSTEM,
+    C_TOOL,
+    C_USER,
+    C_WARNING,
+    QUESTIONARY_MOCHA_STYLE,
+    console,
+)
 
 
 init(autoreset=True)
 
 dataservice = DataService()
 
-from questionary import Style
-
-custom_style = Style([
-    ("question", "fg:#89b4fa bold"),
-    ("answer", "fg:#a6e3a1 bold"),
-    ("pointer", "fg:#cba6f7 bold"),
-    ("highlighted", "fg:#f38ba8 bold"),
-    ("completion-menu", "bg:#1e1e2e fg:#cdd6f4"),
-    ("completion-menu.completion", "bg:#1e1e2e fg:#cdd6f4"),
-    ("completion-menu.completion.current", "bg:#45475a fg:#f5c2e7 bold"),
-])
 
 def instant_req(args):
     """
     Realizar una pregunta rapida a Ollama, soportando comandos /command de herramientas y sesión.
     """
     if not getattr(args, "text", None):
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=custom_style).ask()
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         args.text = req
     else:
         req = args.text
     if not args.text or not args.text.strip():
-        print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
+        print(f"\n{C_ERROR}Error: La pregunta no puede estar vacía.{C_RESET}")
         return 1
 
     args.uuid = None
@@ -64,7 +67,7 @@ def instant_req(args):
         if attached_images:
             return send_chat_request(args, user_input=prompt, images=attached_images)
         else:
-            print(f"{Fore.YELLOW}Uso: {Fore.CYAN}/image <ruta_de_imagen> [pregunta opcional]{Style.RESET_ALL}")
+            print(f"{C_WARNING}Uso: {C_INFO}/image <ruta_de_imagen> [pregunta opcional]{C_RESET}")
             return 1
 
     if command_service.is_command(stripped):
@@ -106,7 +109,7 @@ def handle_interactive_chat_turn(req: str, args):
             code = send_chat_request(args, user_input=prompt, images=attached_images)
             return True, code
         else:
-            print(f"{Fore.YELLOW}Uso: {Fore.CYAN}/image <ruta_de_imagen> [pregunta opcional]{Style.RESET_ALL}")
+            print(f"{C_WARNING}Uso: {C_INFO}/image <ruta_de_imagen> [pregunta opcional]{C_RESET}")
             return True, 0
 
     if command_service.is_command(stripped):
@@ -139,16 +142,16 @@ def chat(args):
     Iniciar una conversacion con un modelo de IA local usando Ollama
     """
     if not getattr(args, "text", None):
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True).ask()
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         args.text = req
     else:
         req = args.text
     if not args.text or not args.text.strip():
-        print(f"{Fore.RED}{Style.BRIGHT}Error: La pregunta no puede estar vacía.{Style.RESET_ALL}")
+        print(f"\n{C_ERROR}Error: La pregunta no puede estar vacía.{C_RESET}")
         return 1
 
     if get_config('model') == 'ollama':
-        print(f"{Fore.RED}{Style.BRIGHT}Error: No se ingreso un modelo valido, configura con el comando 'change_model'.{Style.RESET_ALL}")
+        print(f"\n{C_ERROR}Error: No se ingreso un modelo valido, configura con el comando 'change_model'.{C_RESET}")
         return 1
 
     # Limpiar el contexto en memoria para una nueva conversación
@@ -185,7 +188,7 @@ def chat(args):
         exit_code = 0
 
     while exit_code == 0:
-        req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         should_continue, exit_code = handle_interactive_chat_turn(req, args)
         if not should_continue:
             break
@@ -199,7 +202,7 @@ def continue_chat(args):
     """
     uuid = select_conversation()
     if not uuid or uuid == 1:
-        print(f"{Fore.RED}{Style.BRIGHT}Error: No se seleccionó una conversación válida.{Style.RESET_ALL}")
+        print(f"\n{C_ERROR}Error: No se seleccionó una conversación válida.{C_RESET}")
         return 0
     
     # Asignar el UUID a los argumentos para que send_chat_request lo use
@@ -212,10 +215,10 @@ def continue_chat(args):
     if not getattr(args, 'model', None):
         if bound_model:
             args.model = bound_model
-            print(f"{Fore.CYAN}ℹ️  Modelo asociado al chat: {Fore.GREEN}{args.model}{Style.RESET_ALL}")
+            print(f"{C_INFO}Modelo asociado al chat: {C_SUCCESS}{args.model}{C_RESET}")
     else:
         if bound_model and args.model != bound_model:
-            print(f"{Fore.YELLOW}ℹ️  Cambiando temporalmente el modelo a: {Fore.GREEN}{args.model}{Style.RESET_ALL} (original: {bound_model})")
+            print(f"{C_WARNING}Cambiando temporalmente el modelo a: {C_SUCCESS}{args.model}{C_RESET} {C_MUTED}(original: {bound_model}){C_RESET}")
 
     # Limpiar contexto y cargar el historial de la conversación seleccionada
     clear_context()
@@ -250,7 +253,7 @@ def continue_chat(args):
     exit_code = 0
 
     while exit_code == 0:
-        req = questionary.autocomplete("Usuario:",choices=command_service.list_all_commands, complete_while_typing=True).ask()
+        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         should_continue, exit_code = handle_interactive_chat_turn(req, args)
         if not should_continue:
             break
@@ -263,12 +266,12 @@ def delete_chat(args):
     """
     uuid = select_conversation()
     if not uuid or uuid == 1:
-        print(f"{Fore.RED}{Style.BRIGHT}Error: No se seleccionó una conversación válida.{Style.RESET_ALL}")
+        print(f"\n{C_ERROR}Error: No se seleccionó una conversación válida.{C_RESET}")
         return 0
     
     delete = dataservice.delete(uuid)
     if delete:
-        print(f"{Fore.GREEN}{Style.BRIGHT}Conversación eliminada exitosamente.{Style.RESET_ALL}") 
+        print(f"\n{C_SUCCESS}Conversación eliminada exitosamente.{C_RESET}") 
     return 0
 
 def select_conversation():
@@ -324,7 +327,7 @@ def show_models(args):
         headers={"Content-Type": "application/json"}
     )
 
-    spinner = Halo(text=f'{Fore.CYAN}Consultando modelos en {url_base}...{Style.RESET_ALL}', spinner='dots')
+    spinner = Halo(text=f'{C_INFO}Consultando modelos en {url_base}...{C_RESET}', spinner='dots')
     try:
         spinner.start()
         with urllib.request.urlopen(req, timeout=5) as response:
@@ -336,19 +339,18 @@ def show_models(args):
             models_dict = {}
 
             if not models:
-                print(f"{Fore.YELLOW}{Style.BRIGHT}\nNo se encontraron modelos instalados en tu servidor Ollama.{Style.RESET_ALL}")
-                print(f"{Fore.CYAN}Puedes descargar un modelo ejecutando por ejemplo:")
-                print(f"  ollama run qwen3.5:2b{Style.RESET_ALL} (visión y razonamiento)")
-                print(f"  {Fore.CYAN}ollama run llama3.2:1b{Style.RESET_ALL} (ligero y rápido)")
+                print(f"\n{C_WARNING}No se encontraron modelos instalados en tu servidor Ollama.{C_RESET}")
+                print(f"{C_INFO}Puedes descargar un modelo ejecutando por ejemplo:")
+                print(f"  ollama run qwen3.5:2b (visión y razonamiento)")
+                print(f"  ollama run llama3.2:1b (ligero y rápido){C_RESET}")
                 return 0
 
             current_default = get_config("model")
-            console = Console(force_terminal=True)
 
             table = Table(
-                title=f"[bold magenta]Modelos de IA Disponibles en Ollama[/bold magenta]\n[dim]{url_base}[/dim]",
-                header_style="bold cyan",
-                border_style="dim blue",
+                title=f"[bold {CatppuccinMocha.MAUVE}]Modelos de IA Disponibles en Ollama[/bold {CatppuccinMocha.MAUVE}]\n[{CatppuccinMocha.OVERLAY0}]{url_base}[/]",
+                header_style=f"bold {CatppuccinMocha.BLUE}",
+                border_style=CatppuccinMocha.SURFACE1,
                 show_lines=False
             )
             table.add_column("Modelo", style="bold", min_width=22)
@@ -390,23 +392,23 @@ def show_models(args):
 
                 badges = []
                 if "vision" in raw_caps or any(vn in name_lower for vn in ["vision", "minicpm-v", "llava"]):
-                    badges.append("[bold cyan]Visión[/bold cyan]")
+                    badges.append(f"[bold {CatppuccinMocha.SKY}]Visión[/]")
                 if "thinking" in raw_caps or any(rn in name_lower for rn in ["thinking", "r1"]):
-                    badges.append("[bold magenta]Razonamiento[/bold magenta]")
+                    badges.append(f"[bold {CatppuccinMocha.MAUVE}]Razonamiento[/]")
                 if "tools" in raw_caps:
-                    badges.append("[bold yellow]Tools[/bold yellow]")
+                    badges.append(f"[bold {CatppuccinMocha.YELLOW}]Tools[/]")
                 if "code" in raw_caps or "coder" in name_lower:
-                    badges.append("[bold blue]Código[/bold blue]")
+                    badges.append(f"[bold {CatppuccinMocha.BLUE}]Código[/]")
                 if "completion" in raw_caps:
-                    badges.append("[dim]Texto[/dim]")
+                    badges.append(f"[{CatppuccinMocha.OVERLAY0}]Texto[/]")
 
-                cap_display = " ".join(badges) if badges else "[dim]General[/dim]"
+                cap_display = " ".join(badges) if badges else f"[{CatppuccinMocha.OVERLAY0}]General[/]"
 
                 is_default = (model_name == current_default)
                 if is_default:
-                    name_display = f"[bold green]{model_name}[/bold green] [bold yellow]★ (Default)[/bold yellow]"
+                    name_display = f"[bold {CatppuccinMocha.GREEN}]{model_name}[/] [bold {CatppuccinMocha.YELLOW}](Default)[/]"
                 else:
-                    name_display = f"[white]{model_name}[/white]"
+                    name_display = f"[{CatppuccinMocha.TEXT}]{model_name}[/]"
 
                 table.add_row(name_display, param_size, quant, size_str, ctx_str, cap_display)
 
@@ -422,8 +424,8 @@ def show_models(args):
             write_config("models", models_dict)
             print()
             console.print(table)
-            print(f"\n{Fore.MAGENTA}{Style.BRIGHT}Modelo activo por defecto:{Style.RESET_ALL} {Fore.GREEN}{current_default}{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}Tip: Cambia el modelo por defecto con: {Fore.CYAN}python main.py change_model -m <nombre>{Style.RESET_ALL}")
+            print(f"\n{C_ASSISTANT}Modelo activo por defecto:{C_RESET} {C_SUCCESS}{current_default}{C_RESET}")
+            print(f"{C_WARNING}Tip: Cambia el modelo por defecto con: {C_INFO}python main.py change_model -m <nombre>{C_RESET}")
             return 0
 
     except urllib.error.HTTPError as e:
@@ -586,16 +588,15 @@ def show_tools(args):
     tools_settings = cfg.get("tools", {})
     all_tools = registry.list_tools()
 
-    console = Console(force_terminal=True)
-    status_badge = "[bold green]ACTIVADO[/bold green]" if global_enabled else "[bold red]DESACTIVADO[/bold red]"
+    status_badge = f"[bold {CatppuccinMocha.GREEN}]Activado[/]" if global_enabled else f"[bold {CatppuccinMocha.RED}]Desactivado[/]"
     
     table = Table(
-        title=f"[bold magenta]Herramientas de IA (Tools / Function Calling)[/bold magenta]\nEstado global: {status_badge}",
-        header_style="bold cyan",
-        border_style="dim blue",
+        title=f"[bold {CatppuccinMocha.BLUE}]Herramientas de IA (Tools / Function Calling)[/]\nEstado global: {status_badge}",
+        header_style=f"bold {CatppuccinMocha.YELLOW}",
+        border_style=CatppuccinMocha.SURFACE1,
         show_lines=False
     )
-    table.add_column("Herramienta", style="bold", min_width=20)
+    table.add_column("Herramienta", style=f"bold {CatppuccinMocha.TEAL}", min_width=20)
     table.add_column("Estado", justify="center")
     table.add_column("Confirmación", justify="center")
     table.add_column("Descripción", justify="left")
@@ -605,21 +606,21 @@ def show_tools(args):
         is_enabled = tool_cfg.get("enabled", tool.enabled_by_default)
         needs_confirm = tool_cfg.get("require_confirmation", tool.require_confirmation)
 
-        enabled_str = "[bold green]🟢 Activada[/bold green]" if is_enabled else "[bold red]🔴 Desactivada[/bold red]"
-        confirm_str = "[yellow]🔒 Requerida[/yellow]" if needs_confirm else "[dim green]⚡ Automática[/dim green]"
+        enabled_str = f"[bold {CatppuccinMocha.GREEN}]Activada[/]" if is_enabled else f"[bold {CatppuccinMocha.RED}]Desactivada[/]"
+        confirm_str = f"[{CatppuccinMocha.YELLOW}]Requerida[/]" if needs_confirm else f"[{CatppuccinMocha.TEAL}]Automática[/]"
 
         table.add_row(
-            f"[bold cyan]{tool.name}[/bold cyan]",
+            f"[bold {CatppuccinMocha.TEAL}]{tool.name}[/]",
             enabled_str,
             confirm_str,
             tool.description
         )
 
     console.print(table)
-    print(f"\n{Fore.YELLOW}Tip:{Style.RESET_ALL}")
-    print(f"  • Activar/desactivar: {Fore.CYAN}python main.py enable_tool -t <nombre>{Style.RESET_ALL} / {Fore.CYAN}disable_tool -t <nombre>{Style.RESET_ALL}")
-    print(f"  • Cambiar confirmación: {Fore.CYAN}python main.py tool_confirm -t <nombre> -v <true/false>{Style.RESET_ALL}")
-    print(f"  • Conmutar globalmente: {Fore.CYAN}python main.py toggle_tools{Style.RESET_ALL}")
+    print(f"\n{C_WARNING}Tip:{C_RESET}")
+    print(f"  • Activar/desactivar: {C_INFO}python main.py enable_tool -t <nombre>{C_RESET} / {C_INFO}disable_tool -t <nombre>{C_RESET}")
+    print(f"  • Cambiar confirmación: {C_INFO}python main.py tool_confirm -t <nombre> -v <true/false>{C_RESET}")
+    print(f"  • Conmutar globalmente: {C_INFO}python main.py toggle_tools{C_RESET}")
     return 0
 
 def enable_tool(args):

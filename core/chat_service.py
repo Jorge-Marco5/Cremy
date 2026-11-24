@@ -1,13 +1,19 @@
 from utils.helpers import get_config, write_config
 from gui.render import render_response
 import urllib.request
-from colorama import init, Fore, Style
 from persistent.db import DataService
 import json
+from gui.theme import (
+    C_ERROR,
+    C_INFO,
+    C_MUTED,
+    C_RESET,
+    C_SUCCESS,
+    C_TOOL,
+    C_WARNING,
+)
 
 dataServices = DataService()
-
-init(autoreset=True)
 # El historial del chat es un estado de la sesión, debe vivir aquí.
 context = []
 
@@ -42,7 +48,7 @@ def send_chat_request(args, user_input=None, images=None):
 
         if models and model not in models:
             clear_context()
-            print(f"\n{Fore.RED}{Style.BRIGHT}Error: {Style.RESET_ALL}El modelo '{model}' no está disponible. Usa 'models' para ver los modelos disponibles.")
+            print(f"\n{C_ERROR}Error: {C_RESET}El modelo '{model}' no está disponible. Usa 'models' para ver los modelos disponibles.")
             return 1
     
         # Validar si el modelo soporta visión
@@ -82,24 +88,24 @@ def send_chat_request(args, user_input=None, images=None):
                     m_name for m_name, m_val in models_info.items()
                     if isinstance(m_val, dict) and ("vision" in m_val.get("capabilities", []) or any(vn in m_name.lower() for vn in ["vision", "minicpm-v", "llava"]))
                 ]
-                print(f"\n{Fore.RED}{Style.BRIGHT}Error de compatibilidad:{Style.RESET_ALL} El modelo '{Fore.CYAN}{model}{Style.RESET_ALL}' no tiene capacidad de procesamiento de imágenes (visión).")
+                print(f"\n{C_ERROR}Error de compatibilidad:{C_RESET} El modelo '{C_INFO}{model}{C_RESET}' no tiene capacidad de procesamiento de imágenes (visión).")
                 if vision_models:
-                    print(f"{Fore.YELLOW}Modelos disponibles con soporte de visión en tu servidor:{Style.RESET_ALL}")
+                    print(f"{C_WARNING}Modelos disponibles con soporte de visión en tu servidor:{C_RESET}")
                     for vm in vision_models:
-                        print(f"  • {Fore.GREEN}{vm}{Style.RESET_ALL}")
-                    print(f"{Fore.YELLOW}Ejemplo para usar un modelo con visión: {Fore.CYAN}-m {vision_models[0]}{Style.RESET_ALL}")
+                        print(f"  • {C_SUCCESS}{vm}{C_RESET}")
+                    print(f"{C_WARNING}Ejemplo para usar un modelo con visión: {C_INFO}-m {vision_models[0]}{C_RESET}")
                 else:
-                    print(f"{Fore.YELLOW}Ninguno de tus modelos instalados soporta visión. Puedes descargar uno ejecutando:{Style.RESET_ALL}")
-                    print(f"  {Fore.CYAN}ollama run qwen3.5:2b{Style.RESET_ALL} o {Fore.CYAN}ollama run llama3.2-vision{Style.RESET_ALL}")
+                    print(f"{C_WARNING}Ninguno de tus modelos instalados soporta visión. Puedes descargar uno ejecutando:{C_RESET}")
+                    print(f"  {C_INFO}ollama run qwen3.5:2b{C_RESET} o {C_INFO}ollama run llama3.2-vision{C_RESET}")
                 return 1
 
             from utils.helpers import encode_image
             try:
                 for img_p in image_paths:
                     b64_images.append(encode_image(img_p))
-                print(f"{Fore.CYAN}🖼️  [Imagen adjunta: {', '.join(image_paths)}]{Style.RESET_ALL}")
+                print(f"{C_INFO}[Imagen adjunta: {', '.join(image_paths)}]{C_RESET}")
             except Exception as img_err:
-                print(f"\n{Fore.RED}{Style.BRIGHT}Error al procesar imagen: {img_err}{Style.RESET_ALL}")
+                print(f"\n{C_ERROR}Error al procesar imagen: {img_err}{C_RESET}")
                 return 1
 
         # Añade el mensaje del usuario al contexto y a la BD si aplica
@@ -203,7 +209,7 @@ def send_chat_request(args, user_input=None, images=None):
                         confirmed = ask_tool_confirmation(t_name, args_dict)
                     else:
                         confirmed = True
-                        print(f"{Fore.CYAN}⚡ [Ejecutando herramienta: {t_name}]{Style.RESET_ALL}")
+                        print(f"{C_TOOL}[Ejecutando herramienta: {t_name}]{C_RESET}")
 
                     exec_res = registry.execute_tool(t_name, args_dict, tools_config=tools_cfg, confirmed=confirmed)
                     is_err = not exec_res.get("success", False)
@@ -245,7 +251,7 @@ def send_chat_request(args, user_input=None, images=None):
             response_content, exit_code, tool_calls = render_response(str(model), next_req, bool(stream))
 
         if iteration >= max_iterations and tool_calls:
-            print(f"\n{Fore.YELLOW}ℹ️  Se alcanzó el límite de {max_iterations} iteraciones de herramientas.{Style.RESET_ALL}")
+            print(f"\n{C_WARNING}Se alcanzó el límite de {max_iterations} iteraciones de herramientas.{C_RESET}")
 
         if exit_code == 0 and response_content and not tool_calls:
             context.append({"role": "assistant", "content": response_content})
@@ -256,10 +262,10 @@ def send_chat_request(args, user_input=None, images=None):
                     "content": response_content
                 })
                 if not success:
-                    print(f"\n{Fore.YELLOW}{Style.BRIGHT}Advertencia:{Style.RESET_ALL} No se pudo guardar la respuesta del asistente en la base de datos.")
+                    print(f"\n{C_WARNING}Advertencia:{C_RESET} No se pudo guardar la respuesta del asistente en la base de datos.")
 
         return exit_code
     except Exception as e:
-        print(f"{Fore.RED}{Style.BRIGHT}Error de conexión: {e}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Asegúrate de que Ollama está corriendo con el comando:{Style.RESET_ALL} {Fore.CYAN}ollama serve{Style.RESET_ALL}")
+        print(f"\n{C_ERROR}Error de conexión: {e}{C_RESET}")
+        print(f"{C_WARNING}Asegúrate de que Ollama está corriendo con el comando: {C_INFO}ollama serve{C_RESET}")
         return 1

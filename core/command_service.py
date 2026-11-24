@@ -2,11 +2,20 @@ import json
 import shlex
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
-from colorama import Fore, Style
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from gui.theme import (
+    CatppuccinMocha,
+    C_ERROR,
+    C_INFO,
+    C_MUTED,
+    C_RESET,
+    C_SUCCESS,
+    C_TOOL,
+    C_WARNING,
+    console,
+)
 from tools.base import BaseTool
 from tools.registry import registry
 from utils.helpers import get_config, get_tools_config, parse_option_value
@@ -186,14 +195,14 @@ class CommandService:
 
         # 1. Validar que el sistema global esté activo
         if not tools_cfg.get("enabled", True):
-            print(f"\n{Fore.YELLOW}⚠️  El sistema de herramientas está desactivado globalmente.{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}Puedes reactivarlo con: {Fore.GREEN}python main.py toggle_tools{Style.RESET_ALL}\n")
+            print(f"\n{C_WARNING}El sistema de herramientas está desactivado globalmente.{C_RESET}")
+            print(f"{C_INFO}Puedes reactivarlo con: {C_SUCCESS}python main.py toggle_tools{C_RESET}\n")
             return False, {"error": "El sistema global de herramientas está desactivado."}, False
 
         # 2. Validar que la herramienta esté habilitada individualmente
         if not registry.is_tool_enabled(tool.name, tools_cfg):
-            print(f"\n{Fore.YELLOW}⚠️  La herramienta '{Fore.CYAN}{tool.name}{Fore.YELLOW}' está desactivada en la configuración.{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}Puedes activarla con: {Fore.GREEN}python main.py enable_tool -t {tool.name}{Style.RESET_ALL}\n")
+            print(f"\n{C_WARNING}La herramienta '{tool.name}' está desactivada en la configuración.{C_RESET}")
+            print(f"{C_INFO}Puedes activarla con: {C_SUCCESS}python main.py enable_tool -t {tool.name}{C_RESET}\n")
             return False, {"error": f"La herramienta '{tool.name}' está desactivada."}, False
 
         # 3. Validar confirmación interactiva si la política lo exige
@@ -204,7 +213,7 @@ class CommandService:
                 return False, {"error": "Ejecución cancelada por el usuario."}, True
         else:
             confirmed = True
-            print(f"{Fore.CYAN}⚡ [Ejecutando herramienta manual: {tool.name}]{Style.RESET_ALL}")
+            print(f"{C_TOOL}[Ejecutando herramienta manual: {tool.name}]{C_RESET}")
 
         # 4. Ejecutar la herramienta
         exec_res = registry.execute_tool(tool.name, args_dict, tools_config=tools_cfg, confirmed=confirmed)
@@ -265,34 +274,32 @@ class CommandService:
 
     def show_help(self) -> None:
         """Muestra una pantalla de ayuda Rich con comandos de sesión, herramientas y ejemplos."""
-        console = Console(force_terminal=True)
-
         table_session = Table(
-            title="[bold cyan]Comandos de Control de Sesión[/bold cyan]",
-            header_style="bold magenta",
-            border_style="dim blue",
+            title=f"[bold {CatppuccinMocha.BLUE}]Comandos de Control de Sesión[/]",
+            header_style=f"bold {CatppuccinMocha.MAUVE}",
+            border_style=CatppuccinMocha.SURFACE1,
             show_lines=False
         )
-        table_session.add_column("Comando", style="bold green", min_width=14)
+        table_session.add_column("Comando", style=f"bold {CatppuccinMocha.GREEN}", min_width=14)
         table_session.add_column("Descripción", justify="left")
 
         for cmd, desc in self.SESSION_COMMANDS.items():
             table_session.add_row(f"/{cmd}", desc)
 
         table_tools = Table(
-            title="[bold cyan]Herramientas Disponibles para Ejecución Manual[/bold cyan]",
-            header_style="bold yellow",
-            border_style="dim blue",
+            title=f"[bold {CatppuccinMocha.BLUE}]Herramientas Disponibles para Ejecución Manual[/]",
+            header_style=f"bold {CatppuccinMocha.YELLOW}",
+            border_style=CatppuccinMocha.SURFACE1,
             show_lines=False
         )
-        table_tools.add_column("Herramienta", style="bold cyan", min_width=20)
-        table_tools.add_column("Comando / Alias", style="bold green", min_width=22)
+        table_tools.add_column("Herramienta", style=f"bold {CatppuccinMocha.TEAL}", min_width=20)
+        table_tools.add_column("Comando / Alias", style=f"bold {CatppuccinMocha.GREEN}", min_width=22)
         table_tools.add_column("Descripción", justify="left")
 
         for tool in registry.list_tools():
             aliases = getattr(tool, "aliases", [])
             alias_str = ", ".join([f"/{a}" for a in aliases]) if aliases else f"/{tool.name}"
-            cmd_display = f"/{tool.name}\n[dim]({alias_str})[/dim]" if aliases else f"/{tool.name}"
+            cmd_display = f"/{tool.name}\n[{CatppuccinMocha.OVERLAY0}]({alias_str})[/]" if aliases else f"/{tool.name}"
             table_tools.add_row(tool.name, cmd_display, tool.description)
 
         console.print()
@@ -302,13 +309,13 @@ class CommandService:
 
         panel_syntax = Panel(
             "[bold white]1. Ejecución simple:[/bold white]\n"
-            "   [cyan]/calc 150 * 1.16[/cyan]  o  [cyan]/weather Madrid[/cyan]  o  [cyan]/datetime[/cyan]\n\n"
+            f"   [{CatppuccinMocha.SKY}]/calc 150 * 1.16[/]  o  [{CatppuccinMocha.SKY}]/weather Madrid[/]  o  [{CatppuccinMocha.SKY}]/datetime[/]\n\n"
             "[bold white]2. Ejecución con instrucción adicional para el modelo (usando '--'):[/bold white]\n"
-            "   [cyan]/read_file README.md -- Resume los puntos principales[/cyan]\n"
-            "   [cyan]/weather Tokio -- ¿Qué tipo de ropa debo empacar para este clima?[/cyan]\n"
-            "   [cyan]/bash git status -- Explica qué cambios están pendientes de commit[/cyan]",
-            title="[bold yellow]💡 Guía de Sintaxis[/bold yellow]",
-            border_style="yellow",
+            f"   [{CatppuccinMocha.SKY}]/read_file README.md -- Resume los puntos principales[/]\n"
+            f"   [{CatppuccinMocha.SKY}]/weather Tokio -- ¿Qué tipo de ropa debo empacar para este clima?[/]\n"
+            f"   [{CatppuccinMocha.SKY}]/bash git status -- Explica qué cambios están pendientes de commit[/]",
+            title=f"[bold {CatppuccinMocha.YELLOW}]Guía de Sintaxis[/]",
+            border_style=CatppuccinMocha.SURFACE2,
             expand=False
         )
         console.print()
@@ -342,18 +349,18 @@ class CommandService:
         
         if cmd == "clear":
             clear_context()
-            print(f"\n{Fore.GREEN}{Style.BRIGHT}✓ Contexto de la conversación en memoria limpiado exitosamente.{Style.RESET_ALL}\n")
+            print(f"\n{C_SUCCESS}Contexto de la conversación en memoria limpiado exitosamente.{C_RESET}\n")
             return CommandDispatchResult(is_command=True, handled=True, should_skip_model=True)
 
         if cmd == "model":
             target_model = args_str.strip()
             if target_model:
                 args.model = target_model
-                print(f"\n{Fore.GREEN}{Style.BRIGHT}✓ Modelo de la sesión cambiado a: {Fore.CYAN}{target_model}{Style.RESET_ALL}\n")
+                print(f"\n{C_SUCCESS}Modelo de la sesión cambiado a: {C_INFO}{target_model}{C_RESET}\n")
             else:
                 current_model = getattr(args, "model", None) or get_config("model")
-                print(f"\n{Fore.CYAN}ℹ️  Modelo activo actualmente: {Fore.GREEN}{current_model}{Style.RESET_ALL}")
-                print(f"{Fore.YELLOW}Tip: Cambia el modelo temporalmente con: {Fore.CYAN}/model <nombre>{Style.RESET_ALL}\n")
+                print(f"\n{C_INFO}Modelo activo actualmente: {C_SUCCESS}{current_model}{C_RESET}")
+                print(f"{C_WARNING}Tip: Cambia el modelo temporalmente con: {C_INFO}/model <nombre>{C_RESET}\n")
             return CommandDispatchResult(is_command=True, handled=True, should_skip_model=True)
 
         return CommandDispatchResult(is_command=True, handled=False)
@@ -376,8 +383,8 @@ class CommandService:
         # 2. Comprobar si corresponde a una herramienta registrada
         tool = self.find_tool_by_command(cmd_name)
         if not tool:
-            print(f"\n{Fore.RED}{Style.BRIGHT}Error: Comando '/{cmd_name}' no reconocido.{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}Escribe {Fore.CYAN}/help{Fore.YELLOW} para ver la lista de comandos y herramientas disponibles.{Style.RESET_ALL}\n")
+            print(f"\n{C_ERROR}Error: Comando '/{cmd_name}' no reconocido.{C_RESET}")
+            print(f"{C_WARNING}Escribe {C_INFO}/help{C_WARNING} para ver la lista de comandos y herramientas disponibles.{C_RESET}\n")
             return CommandDispatchResult(
                 is_command=True,
                 handled=False,
