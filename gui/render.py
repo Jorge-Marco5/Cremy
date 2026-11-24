@@ -24,9 +24,48 @@ from gui.theme import (
     C_USER,
     C_WARNING,
     console,
+    ansi_hex
 )
 
 dataService = DataService()
+
+def render_banner(args = ''):
+    """
+    Construccion del banner
+    """
+    #Configuracion de colores
+    c = ansi_hex(CatppuccinMocha.ROSEWATER, bold=True)#crema
+    r = ansi_hex(CatppuccinMocha.RED, bold=True)
+    p = ansi_hex(CatppuccinMocha.PEACH, bold=True)
+    y = ansi_hex(CatppuccinMocha.YELLOW, bold=True)
+    g = ansi_hex(CatppuccinMocha.GREEN, bold=True)
+    b = ansi_hex(CatppuccinMocha.BLUE, bold=True)
+
+    print(f"""                           
+{c}                      @:.                      
+{c}                      @. @                    
+{c}                     @....@                   
+{c}                  .@.......@                  
+{c}               .@..........@                  
+{c}              @............@:@@               
+{c}            @..............@....@.            
+{c}           @................*@....@           {r}   /@@@@@@@{p}   /@@@@@@ {y}   /@@@@@@ {g}  /@@@@@@/@@@@  {b}/@@   /@@
+{c}          :@......................@           {r}  /@@_____/{p}  /@@__  @@{y}  /@@__  @@{g} | @@_  @@_  @@|{b} @@  | @@
+{c}        @...@...:@@@......:@@@@...@.          {r} | @@      {p} | @@  \__/{y} | @@@@@@@@{g} | @@ \ @@ \ @@|{b} @@  | @@
+{c}       @.......%@@  @.....@@@  @.....@        {r} | @@      {p} | @@  \__/{y} | @@@@@@@@{g} | @@ \ @@ \ @@|{b} @@  | @@
+{c}       @.......%@@@@@.....@@@@@@......@       {r} | @@      {p} | @@      {y} | @@_____/{g} | @@ | @@ | @@|{b} @@  | @@
+{c}      :@.............-=_=-.........+@.@       {r} |  @@@@@@@{p} | @@      {y} |  @@@@@@@{g} | @@ | @@ | @@|{b}  @@@@@@@
+{c}     @..@.......:.............:........@      {r}  \_______/{p} |__/      {y}  \_______/{g} |__/ |__/ |__/ {b}\____  @@
+{c}    @.....@..............................@    {r}                                                {g}{b} /@@  | @@
+{c}    @.......:@...........................@    {r}                                                {g}{b}|  @@@@@@/
+{c}    @...........................@.......@     {r}                                                {g}{b} \______/ 
+{c}     @............................@....@      
+{c}       '@@======...................@@@        
+{c}            @@@@====_________===@@@:            
+                       
+    """)
+    
+    print(f"""{ansi_hex(CatppuccinMocha.CRUST)}█{ansi_hex(CatppuccinMocha.MANTLE)}█{ansi_hex(CatppuccinMocha.BASE)}█{ansi_hex(CatppuccinMocha.SURFACE0)}█{ansi_hex(CatppuccinMocha.SURFACE1)}█{ansi_hex(CatppuccinMocha.SURFACE2)}█{ansi_hex(CatppuccinMocha.OVERLAY0)}█{ansi_hex(CatppuccinMocha.OVERLAY1)}█{ansi_hex(CatppuccinMocha.OVERLAY2)}█{ansi_hex(CatppuccinMocha.SUBTEXT0)}█{ansi_hex(CatppuccinMocha.SUBTEXT1)}█{ansi_hex(CatppuccinMocha.TEXT)}█{ansi_hex(CatppuccinMocha.LAVENDER)}█{ansi_hex(CatppuccinMocha.BLUE)}█{ansi_hex(CatppuccinMocha.SAPPHIRE)}█{ansi_hex(CatppuccinMocha.SKY)}█{ansi_hex(CatppuccinMocha.TEAL)}█{ansi_hex(CatppuccinMocha.GREEN)}█{ansi_hex(CatppuccinMocha.YELLOW)}█{ansi_hex(CatppuccinMocha.PEACH)}█{ansi_hex(CatppuccinMocha.MAROON)}█{ansi_hex(CatppuccinMocha.RED)}█{ansi_hex(CatppuccinMocha.MAUVE)}█{ansi_hex(CatppuccinMocha.PINK)}█{ansi_hex(CatppuccinMocha.FLAMINGO)}█{ansi_hex(CatppuccinMocha.ROSEWATER)}█\n""")
 
 
 def render_response(agent: str, req: urllib.request.Request, stream: bool):

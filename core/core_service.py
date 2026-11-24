@@ -16,7 +16,7 @@ from utils.format_time import format_duration
 from core.chat_service import send_chat_request, clear_context, context
 from gui.render import render_message
 from persistent.db import DataService
-from gui.render import render_conversation
+from gui.render import render_conversation, render_banner
 from simple_term_menu import TerminalMenu
 from core.command_service import command_service
 from tools.registry import registry
@@ -47,7 +47,7 @@ def instant_req(args):
     Realizar una pregunta rapida a Ollama, soportando comandos /command de herramientas y sesión.
     """
     if not getattr(args, "text", None):
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
+        req = questionary.autocomplete("Haz una pregunta: ", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         args.text = req
     else:
         req = args.text
@@ -141,8 +141,10 @@ def chat(args):
     """
     Iniciar una conversacion con un modelo de IA local usando Ollama
     """
+    render_banner();
+
     if not getattr(args, "text", None):
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
+        req = questionary.autocomplete("Haz una pregunta: ", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         args.text = req
     else:
         req = args.text
@@ -188,7 +190,7 @@ def chat(args):
         exit_code = 0
 
     while exit_code == 0:
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
+        req = questionary.autocomplete("Usuario: ", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         should_continue, exit_code = handle_interactive_chat_turn(req, args)
         if not should_continue:
             break
@@ -222,6 +224,9 @@ def continue_chat(args):
 
     # Limpiar contexto y cargar el historial de la conversación seleccionada
     clear_context()
+    
+    render_banner();
+
     messages = dataservice.show_messages(str(uuid))
     if messages:
         for message in messages:
@@ -253,7 +258,7 @@ def continue_chat(args):
     exit_code = 0
 
     while exit_code == 0:
-        req = questionary.autocomplete("Usuario:", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
+        req = questionary.autocomplete("Usuario: ", choices=command_service.list_all_commands, complete_while_typing=True, style=QUESTIONARY_MOCHA_STYLE).ask()
         should_continue, exit_code = handle_interactive_chat_turn(req, args)
         if not should_continue:
             break

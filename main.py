@@ -7,7 +7,7 @@ from core.core_service import (
     change_models, change_host, system_prompt, show_usage,
     show_options, set_option, reset_options, think_handler,
     show_tools, enable_tool, disable_tool, set_tool_confirmation,
-    toggle_tools_handler
+    toggle_tools_handler, render_banner
 )
 from utils.helpers import file_path
 
@@ -43,6 +43,9 @@ def main():
     try:
         parser = argparse.ArgumentParser(description="Herramienta CLI para usar modelos de IA locales Ollama con salida formato MD")
         subparsers = parser.add_subparsers(title="Funciones", dest="comando", help="Subcomandos disponibles")
+
+        paper_question = subparsers.add_parser("banner", help="Muestra el paper de la aplicación")
+        paper_question.set_defaults(func=render_banner)
 
         parser_question = subparsers.add_parser("req", help="Realizar consulta rapida a un modelo de IA local")
         #parser_question.add_argument("-t", "--text", help="Agrega tu pregunta envuelta en ' '")
