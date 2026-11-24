@@ -109,7 +109,7 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
                                 console.print(syntax)
                             else:
                                 if completed_line.strip():
-                                    console.print(Markdown(completed_line))
+                                    console.print(Markdown(completed_line, code_theme=CatppuccinMochaPygmentsStyle))
                                 else:
                                     console.print()
                             
@@ -145,7 +145,7 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
                             console.print(" ────", style=f"{CatppuccinMocha.OVERLAY0}")
                         else:
                             clear_active_line(current_line, terminal_width)
-                            console.print(Markdown(current_line))
+                            console.print(Markdown(current_line, code_theme=CatppuccinMochaPygmentsStyle))
                 else:
                     response_body = response.read().decode("utf-8")
                     res = json.loads(response_body)
@@ -157,7 +157,7 @@ def render_response(agent: str, req: urllib.request.Request, stream: bool):
                     duration = res.get("eval_duration", 0)
                     full_response_content = content
                     if content:
-                        console.print(Markdown(content))
+                        console.print(Markdown(content, code_theme=CatppuccinMochaPygmentsStyle))
         finally:
             spinner.stop()
         if tokens > 0:
@@ -176,7 +176,7 @@ def render_message(agent: str, content: str):
     Metodo para renderizar un mensaje en la terminal
     """
     print(f"\n{C_SYSTEM}{agent}{C_RESET}")
-    console.print(Markdown(content))
+    console.print(Markdown(content, code_theme=CatppuccinMochaPygmentsStyle))
     return 0
 
 def render_conversation(uuid: str):
@@ -278,4 +278,4 @@ def render_static_message(content: str, console: Console):
             # Las partes pares (0, 2, 4...) son Markdown normal
             part_to_render = part.strip('\n')
             if part_to_render:
-                console.print(Markdown(part_to_render))
+                console.print(Markdown(part_to_render, code_theme=CatppuccinMochaPygmentsStyle))

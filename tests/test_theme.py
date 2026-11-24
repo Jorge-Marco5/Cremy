@@ -81,6 +81,15 @@ class TestTheme(unittest.TestCase):
         self.assertEqual(style.background_color, CatppuccinMocha.BASE)
         self.assertEqual(style.default_style, CatppuccinMocha.TEXT)
 
+    def test_pygments_style_tokens_not_black(self):
+        from rich.syntax import PygmentsSyntaxTheme
+        from pygments.token import Token, Text
+        pst = PygmentsSyntaxTheme(CatppuccinMochaPygmentsStyle)
+        text_style = pst.get_style_for_token(Token.Text)
+        self.assertIsNotNone(text_style.color)
+        self.assertNotEqual(text_style.color.name, "#000000")
+        self.assertEqual(text_style.color.name, CatppuccinMocha.TEXT)
+
     def test_console_theme(self):
         self.assertIsNotNone(console)
         self.assertTrue(hasattr(console, "_theme_stack"))
