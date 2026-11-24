@@ -236,7 +236,7 @@ def render_conversation(uuid: str):
         print(f"\n{C_ERROR}Error al obtener los mensajes: {e}{C_RESET}")
         return
     
-def render_static_message(content: str, console: Console):
+def render_static_message(content: str, console: console):
     """
     Renderiza un mensaje de texto estático, aplicando formato de Markdown y bloques de código.
     """
