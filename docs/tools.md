@@ -6,14 +6,14 @@ Este documento describe la arquitectura, el flujo de ejecución, la configuraci�
 
 ## Tabla de Contenidos
 
-1. [Introducción](#-introducción)
-2. [Arquitectura y Flujo de Ejecución (Ciclo ReAct)](#-arquitectura-y-flujo-de-ejecución-ciclo-react)
-3. [Estructura del Proyecto y Responsabilidades](#-estructura-del-proyecto-y-responsabilidades)
-4. [Herramientas Integradas por Defecto](#-herramientas-integradas-por-defecto)
-5. [Gestión y Comandos CLI](#-gestión-y-comandos-cli)
-6. [Confirmación del Usuario y Seguridad](#-confirmación-del-usuario-y-seguridad)
-7. [Persistencia en Base de Datos](#-persistencia-en-base-de-datos)
-8. [Guía: Cómo Crear una Nueva Herramienta](#-guía-cómo-crear-una-nueva-herramienta)
+1. [Introducción](#introducción)
+2. [Arquitectura y Flujo de Ejecución (Ciclo ReAct)](#arquitectura-y-flujo-de-ejecución-ciclo-react)
+3. [Estructura del Proyecto y Responsabilidades](#estructura-del-proyecto-y-responsabilidades)
+4. [Herramientas Integradas por Defecto](#herramientas-integradas-por-defecto)
+5. [Gestión y Comandos CLI](#gestión-y-comandos-cli)
+6. [Confirmación del Usuario y Seguridad](#confirmación-del-usuario-y-seguridad)
+7. [Persistencia en Base de Datos](#persistencia-en-base-de-datos)
+8. [Guía: Cómo Crear una Nueva Herramienta](#guía-cómo-crear-una-nueva-herramienta)
 
 ---
 

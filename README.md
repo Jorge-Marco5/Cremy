@@ -6,9 +6,9 @@ Cremy es una herramienta de línea de comandos (CLI) que te permite interactuar 
 
 ## Tabla de Contenidos
 
-1. [Instalacion](#-instalacion)
-2. [Otras guias](#-otras-guias)
-3. [Configuración y uso](#-configuracion-y-uso)
+1. [Instalacion](#instalacion)
+2. [Otras guias](#otras-guias)
+3. [Configuración y uso](#configuracion-y-uso)
 
 ## Instalación
 
