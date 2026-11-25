@@ -64,6 +64,19 @@ class TestDatabaseTools(unittest.TestCase):
         self.assertEqual(tool_msg[1], "tool")
         self.assertIn('"result": 4', tool_msg[2])
 
+    def test_show_messages_returns_latest_in_chronological_order(self):
+        uuid = self.service.create_conversation("Historial Largo", model="llama3")
+        for i in range(1, 6):
+            self.service.insert_message({
+                "conversation_uuid": uuid,
+                "role": "user" if i % 2 == 1 else "assistant",
+                "content": f"mensaje-{i}"
+            })
+
+        latest = self.service.show_messages(uuid, limit=2)
+        self.assertEqual(len(latest), 2)
+        self.assertEqual([m[2] for m in latest], ["mensaje-4", "mensaje-5"])
+
 
 if __name__ == "__main__":
     unittest.main()

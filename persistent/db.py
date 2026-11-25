@@ -100,7 +100,17 @@ class DataService:
 
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT id, role, content, created_at, images, tool_calls, tool_name FROM messages WHERE conversation_uuid = ? ORDER BY created_at ASC LIMIT ?",
+            """
+            SELECT id, role, content, created_at, images, tool_calls, tool_name
+            FROM (
+                SELECT id, role, content, created_at, images, tool_calls, tool_name
+                FROM messages
+                WHERE conversation_uuid = ?
+                ORDER BY id DESC
+                LIMIT ?
+            )
+            ORDER BY id ASC
+            """,
             (str(uuid), int(limit))
         )
         return cursor.fetchall()
