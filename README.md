@@ -51,7 +51,7 @@ pip install -r requirements.txt
 
 ## Configuracion y uso
 
-> **Nota:** Todos los ejemplos a continuación pueden ejecutarse anteponiendo `uv run` (ej. `uv run main.py <accion>` o `uv run Cremy <accion>`), usando `./run.sh <accion>`, o directamente con `python main.py <accion>` si ya activaste el entorno virtual (`.venv`).
+> **Nota:** Todos los ejemplos a continuación pueden ejecutarse anteponiendo `uv run` (ej. `uv run main.py <accion>` o `uv run Cremy <accion>`), usando `./cremy <accion>`, o directamente con `python main.py <accion>` si ya activaste el entorno virtual (`.venv`).
 
 - ### Comandos de ayuda general
 
