@@ -1,35 +1,38 @@
-from rich.markdown import Markdown
-from rich.live import Live
-from rich.syntax import Syntax
-import urllib.request
 import json
-import sys
-import os
+import urllib.error
+import urllib.request
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
 from halo import Halo
-from utils.helpers import clear_active_line, save_usage
-from utils.format_time import format_duration
-from persistent.db import DataService
+from rich.console import Console, Group
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.text import Text
+
+from core.ollama_client import StreamEvent, stream_ollama_chat
 from gui.theme import (
     CatppuccinMocha,
     CatppuccinMochaPygmentsStyle,
     C_ASSISTANT,
     C_ERROR,
     C_INFO,
-    C_INFO_NORMAL,
-    C_MUTED,
     C_RESET,
     C_SUCCESS,
     C_SYSTEM,
     C_TOOL,
     C_USER,
     C_WARNING,
+    ansi_hex,
     console,
-    ansi_hex
 )
+from persistent.db import DataService
+from utils.format_time import format_duration
+from utils.helpers import save_usage
 
-dataService = DataService()
 
-def render_banner(args = ''):
+def render_banner(args=""):
     """
     Construcción y renderizado del banner principal en Catppuccin Mocha
     """
@@ -37,20 +40,17 @@ def render_banner(args = ''):
     c_body = ansi_hex(CatppuccinMocha.ROSEWATER)
     c_crest = ansi_hex(CatppuccinMocha.TEXT, bold=True)
     c_eyes = ansi_hex(CatppuccinMocha.TEXT, bold=True)
-    c_mouth = ansi_hex(CatppuccinMocha.PINK, bold=True)
     c_blush = ansi_hex(CatppuccinMocha.MAROON, bold=True)
     c_base = ansi_hex(CatppuccinMocha.OVERLAY2)
 
-    # texto
+    # Texto
     c1 = ansi_hex(CatppuccinMocha.MAUVE, bold=True)
     c2 = ansi_hex(CatppuccinMocha.PINK, bold=True)
     c3 = ansi_hex(CatppuccinMocha.BLUE, bold=True)
     c4 = ansi_hex(CatppuccinMocha.TEAL, bold=True)
     c5 = ansi_hex(CatppuccinMocha.GREEN, bold=True)
 
-    # Subtítulo y divisores
-    c_sub = ansi_hex(CatppuccinMocha.SUBTEXT0)
-    c_mut = ansi_hex(CatppuccinMocha.OVERLAY0)
+    # Divisores
     c_div = ansi_hex(CatppuccinMocha.SURFACE1)
 
     banner_lines = [
@@ -99,167 +99,212 @@ def render_banner(args = ''):
     print("\n" + "\n".join(banner_lines) + "\n" + palette_line)
 
 
-def render_response(agent: str, req: urllib.request.Request, stream: bool):
+def _build_response_renderable(
+    thinking_text: str,
+    content_text: str,
+    is_thinking: bool = False,
+) -> Group:
+    """Construye el bloque Rich unificado (panel de razonamiento + Markdown nativo)."""
+    renderables = []
+
+    if thinking_text:
+        title = (
+            f"[italic {CatppuccinMocha.MAUVE}]Pensando...[/]"
+            if is_thinking
+            else f"[italic {CatppuccinMocha.OVERLAY1}]Razonamiento[/]"
+        )
+        thinking_panel = Panel(
+            Text(thinking_text.strip(), style=f"italic {CatppuccinMocha.OVERLAY1}"),
+            title=title,
+            title_align="left",
+            border_style=CatppuccinMocha.SURFACE2,
+            padding=(0, 1),
+        )
+        renderables.append(thinking_panel)
+
+    if content_text:
+        renderables.append(
+            Markdown(content_text, code_theme=CatppuccinMochaPygmentsStyle)
+        )
+
+    return Group(*renderables)
+
+
+def render_event_stream(
+    events: Iterable[StreamEvent],
+    stream: bool,
+    spinner: Optional[Any] = None,
+    target_console: Console = console,
+) -> Tuple[str, List[Dict[str, Any]], int, int]:
     """
-    Metodo para renderizar la respuesta del modelo en la terminal
+    Consume eventos tipados de Ollama y los renderiza usando Rich.
+    Retorna (full_response_content, tool_calls, tokens, duration).
     """
+    thinking_text = ""
     full_response_content = ""
-    tool_calls = []
-    try:
-        spinner = Halo(text=f'{C_INFO}Pensando...{C_RESET}', spinner='dots')
-        print(f"\n{C_ASSISTANT}Model: {agent}{C_RESET}")
-        tokens = 0
-        duration = 0
-        spinner.start()
-        sys.stdout.write("")
-        sys.stdout.flush()
-        try:
-            with urllib.request.urlopen(req) as response:
-                spinner.stop()
-                if stream:
-                    try:
-                        terminal_width = os.get_terminal_size().columns
-                    except OSError:
-                        terminal_width = console.width or 80
-                        
-                    current_line = ""
-                    in_code_block = False
-                    code_language = "sh"
-                    
-                    for raw_line in response:
-                        if not raw_line:
-                            continue
-                        line_str = raw_line.decode("utf-8").strip()
-                        if not line_str:
-                            continue
-                        try:
-                            res = json.loads(line_str)
-                        except json.JSONDecodeError:
-                            continue
-                        
-                        if res.get("done"):
-                            tokens = res.get("eval_count", 0)
-                            duration = res.get("eval_duration", 0)
-                            
-                        msg_obj = res.get("message", {})
-                        chunk_tools = msg_obj.get("tool_calls")
-                        if chunk_tools:
-                            tool_calls.extend(chunk_tools)
+    tool_calls: List[Dict[str, Any]] = []
+    tokens = 0
+    duration = 0
+    spinner_stopped = False
 
-                        content = msg_obj.get("content", "")
-                        if not content:
-                            continue
-                            
-                        if "\n" in content:
-                            parts = content.split("\n")
-                            
-                            completed_line = current_line + parts[0]
-                            if in_code_block:
-                                clear_active_line("" + current_line, terminal_width)
-                            else:
-                                clear_active_line(current_line, terminal_width)
-                            
-                            if "```" in completed_line:
-                                in_code_block = not in_code_block
-                                num_dashes = terminal_width - len(f'────┤{code_language}├')
-                                footer_dashes = terminal_width - len('───')
-                                if in_code_block:
-                                    lang = completed_line.replace("```", "").strip()
-                                    code_language = lang if lang else "sh"
-                                    print(f'{C_INFO}────┤{C_RESET}{C_INFO_NORMAL}{code_language}{C_RESET}{C_INFO}├{"─" * num_dashes}{C_RESET}')
-                                else:
-                                    print(f'{C_INFO}{"─" * footer_dashes}{C_RESET}')
-                            elif in_code_block:
-                                sys.stdout.write("")
-                                sys.stdout.flush()
-                                try:
-                                    syntax = Syntax(completed_line, lexer=code_language, theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                                except Exception:
-                                    syntax = Syntax(completed_line, lexer="text", theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                                console.print(syntax)
-                            else:
-                                if completed_line.strip():
-                                    console.print(Markdown(completed_line, code_theme=CatppuccinMochaPygmentsStyle))
-                                else:
-                                    console.print()
-                            
-                            current_line = parts[-1]
-                            if current_line:
-                                if in_code_block:
-                                    sys.stdout.write(f"{current_line}")
-                                else:
-                                    sys.stdout.write(current_line)
-                                sys.stdout.flush()
-                        else:
-                            if in_code_block:
-                                clear_active_line("" + current_line, terminal_width)
-                                current_line += content
-                                sys.stdout.write(f"{current_line}")
-                            else:
-                                clear_active_line(current_line, terminal_width)
-                                current_line += content
-                                sys.stdout.write(current_line)
-                            sys.stdout.flush()
-                        full_response_content += content
-                    
-                    if current_line:
-                        if in_code_block:
-                            clear_active_line("" + current_line, terminal_width)
-                            sys.stdout.write("")
-                            sys.stdout.flush()
-                            try:
-                                syntax = Syntax(current_line, lexer=code_language, theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                            except Exception:
-                                syntax = Syntax(current_line, lexer="text", theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                            console.print(syntax)
-                            console.print(" ────", style=f"{CatppuccinMocha.OVERLAY0}")
-                        else:
-                            clear_active_line(current_line, terminal_width)
-                            console.print(Markdown(current_line, code_theme=CatppuccinMochaPygmentsStyle))
-                else:
-                    response_body = response.read().decode("utf-8")
-                    res = json.loads(response_body)
-                    msg_obj = res.get("message", {})
-                    content = msg_obj.get("content", "")
-                    tool_calls = msg_obj.get("tool_calls", [])
-                    
-                    tokens = res.get("eval_count", 0)
-                    duration = res.get("eval_duration", 0)
-                    full_response_content = content
-                    if content:
-                        console.print(Markdown(content, code_theme=CatppuccinMochaPygmentsStyle))
-        finally:
+    def _stop_spinner():
+        nonlocal spinner_stopped
+        if spinner is not None and not spinner_stopped:
             spinner.stop()
-        if tokens > 0:
-            print(f"\n{C_SUCCESS}Tokens: {C_RESET}{tokens}")
-        if duration > 0:
-            print(f'{C_TOOL}Duracion: {C_RESET}{format_duration(duration)}') 
-        save_usage(agent, tokens, duration)
-        return full_response_content, 0, tool_calls
-    except Exception as e:
-        print(f"\n{C_ERROR}Error de conexión: {e}{C_RESET}")
-        print(f"{C_WARNING}Asegúrate de que Ollama está corriendo con el comando: {C_INFO}ollama serve{C_RESET}")
-        return None, 1, []
+            spinner_stopped = True
 
-def render_message(agent: str, content: str):
+    if stream:
+        live: Optional[Live] = None
+        try:
+            for event in events:
+                if event.kind == "thinking":
+                    _stop_spinner()
+                    thinking_text += event.text
+                    renderable = _build_response_renderable(
+                        thinking_text, full_response_content, is_thinking=True
+                    )
+                    if live is None:
+                        live = Live(
+                            renderable,
+                            console=target_console,
+                            refresh_per_second=12,
+                            vertical_overflow="visible",
+                        )
+                        live.start()
+                    else:
+                        live.update(renderable)
+
+                elif event.kind == "content":
+                    _stop_spinner()
+                    full_response_content += event.text
+                    renderable = _build_response_renderable(
+                        thinking_text, full_response_content, is_thinking=False
+                    )
+                    if live is None:
+                        live = Live(
+                            renderable,
+                            console=target_console,
+                            refresh_per_second=12,
+                            vertical_overflow="visible",
+                        )
+                        live.start()
+                    else:
+                        live.update(renderable)
+
+                elif event.kind == "tool_calls":
+                    _stop_spinner()
+                    tool_calls.extend(event.tool_calls)
+
+                elif event.kind == "done":
+                    _stop_spinner()
+                    tokens = event.eval_count
+                    duration = event.eval_duration
+
+            if live is not None:
+                live.update(
+                    _build_response_renderable(
+                        thinking_text, full_response_content, is_thinking=False
+                    ),
+                    refresh=True,
+                )
+        finally:
+            if live is not None:
+                live.stop()
+            _stop_spinner()
+    else:
+        try:
+            for event in events:
+                if event.kind == "thinking":
+                    thinking_text += event.text
+                elif event.kind == "content":
+                    full_response_content += event.text
+                elif event.kind == "tool_calls":
+                    tool_calls.extend(event.tool_calls)
+                elif event.kind == "done":
+                    tokens = event.eval_count
+                    duration = event.eval_duration
+        finally:
+            _stop_spinner()
+
+        if thinking_text or full_response_content:
+            target_console.print(
+                _build_response_renderable(
+                    thinking_text, full_response_content, is_thinking=False
+                )
+            )
+
+    return full_response_content, tool_calls, tokens, duration
+
+
+def render_response(
+    agent: str,
+    req: urllib.request.Request,
+    stream: bool,
+    target_console: Console = console,
+) -> Tuple[Optional[str], int, List[Dict[str, Any]]]:
     """
-    Metodo para renderizar un mensaje en la terminal
+    Método para obtener y renderizar la respuesta del modelo en la terminal.
+    """
+    spinner = Halo(text=f"{C_INFO}Pensando...{C_RESET}", spinner="dots")
+    print(f"\n{C_ASSISTANT}Model: {agent}{C_RESET}")
+    spinner.start()
+
+    try:
+        events = stream_ollama_chat(req, stream=bool(stream))
+        full_response_content, tool_calls, tokens, duration = render_event_stream(
+            events,
+            stream=bool(stream),
+            spinner=spinner,
+            target_console=target_console,
+        )
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ConnectionError) as e:
+        spinner.stop()
+        print(f"\n{C_ERROR}Error de conexión: {e}{C_RESET}")
+        print(
+            f"{C_WARNING}Asegúrate de que Ollama está corriendo con el comando: "
+            f"{C_INFO}ollama serve{C_RESET}"
+        )
+        return None, 1, []
+    except Exception as e:
+        spinner.stop()
+        print(f"\n{C_ERROR}Error al procesar o renderizar la respuesta: {e}{C_RESET}")
+        return None, 1, []
+    finally:
+        spinner.stop()
+
+    if tokens > 0:
+        print(f"\n{C_SUCCESS}Tokens: {C_RESET}{tokens}")
+    if duration > 0:
+        print(f"{C_TOOL}Duracion: {C_RESET}{format_duration(duration)}")
+    save_usage(agent, tokens, duration)
+    return full_response_content, 0, tool_calls
+
+
+def render_message(agent: str, content: str, target_console: Console = console):
+    """
+    Método para renderizar un mensaje en la terminal.
     """
     print(f"\n{C_SYSTEM}{agent}{C_RESET}")
-    console.print(Markdown(content, code_theme=CatppuccinMochaPygmentsStyle))
+    target_console.print(Markdown(content, code_theme=CatppuccinMochaPygmentsStyle))
     return 0
 
-def render_conversation(uuid: str):
+
+def render_conversation(
+    uuid: str,
+    limit: int = 20,
+    data_service: Optional[DataService] = None,
+    target_console: Console = console,
+):
     """
-    Metodo para renderizar una conversacion con los ultimos 20 mensajes en la terminal o los que indique el usuario con el uuid de la conversacion
+    Método para renderizar una conversación con los últimos mensajes en la terminal.
     """
     try:
-        messages = dataService.show_messages(uuid, 20)
+        ds = data_service if data_service is not None else DataService()
+        messages = ds.show_messages(uuid, limit)
         if not messages:
             print(f"\n{C_WARNING}No hay mensajes en esta conversación.{C_RESET}")
             return
-        
-        #Renderizar mensajes
+
         for message in messages:
             role = message[1]
             content = message[2]
@@ -277,15 +322,20 @@ def render_conversation(uuid: str):
                     except Exception:
                         pass
                 if content:
-                    render_static_message(content, console)
+                    render_static_message(content, target_console)
             elif role == "tool":
                 print(f"\n{C_TOOL}Herramienta (Resultado):{C_RESET}")
                 try:
                     tool_json = json.loads(content)
-                    syntax = Syntax(json.dumps(tool_json, indent=2, ensure_ascii=False), lexer="json", theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                    console.print(syntax)
+                    syntax = Syntax(
+                        json.dumps(tool_json, indent=2, ensure_ascii=False),
+                        lexer="json",
+                        theme=CatppuccinMochaPygmentsStyle,
+                        word_wrap=True,
+                    )
+                    target_console.print(syntax)
                 except Exception:
-                    render_static_message(content, console)
+                    render_static_message(content, target_console)
             else:
                 print(f"\n{C_ASSISTANT}Asistente:{C_RESET}")
                 if raw_tools:
@@ -296,56 +346,24 @@ def render_conversation(uuid: str):
                                 fn = tc.get("function", {})
                                 fn_name = fn.get("name", "tool")
                                 fn_args = fn.get("arguments", {})
-                                print(f"{C_WARNING}[Llamada a {fn_name}: {json.dumps(fn_args, ensure_ascii=False)}]{C_RESET}")
+                                print(
+                                    f"{C_WARNING}[Llamada a {fn_name}: "
+                                    f"{json.dumps(fn_args, ensure_ascii=False)}]{C_RESET}"
+                                )
                     except Exception:
                         pass
                 if content:
-                    render_static_message(content, console)
-        
+                    render_static_message(content, target_console)
+
     except Exception as e:
         print(f"\n{C_ERROR}Error al obtener los mensajes: {e}{C_RESET}")
         return
-    
-def render_static_message(content: str, console: console):
+
+
+def render_static_message(content: str, target_console: Console = console):
     """
-    Renderiza un mensaje de texto estático, aplicando formato de Markdown y bloques de código.
+    Renderiza un mensaje estático usando Rich Markdown con el tema Catppuccin Mocha.
     """
-    try:
-        terminal_width = os.get_terminal_size().columns
-    except OSError:
-        terminal_width = console.width or 80
-
-    # Dividir el contenido por los delimitadores de bloque de código
-    parts = content.split("```")
-
-    for i, part in enumerate(parts):
-        if not part:
-            continue
-
-        # Las partes impares (1, 3, 5...) están dentro de un bloque de código
-        if i % 2 == 1:
-            # El bloque de código tiene el lenguaje en la primera línea
-            lines = part.split('\n', 1)
-            language = lines[0].strip() or "sh"
-            code = lines[1] if len(lines) > 1 else ""
-
-            # Renderizar encabezado del bloque de código
-            header_text = f'┤{language}├'
-            num_dashes = terminal_width - len(header_text) - 4
-            print(f'{C_INFO}────{header_text}{"─" * num_dashes}{C_RESET}')
-
-            # Renderizar el código con resaltado de sintaxis Catppuccin Mocha
-            if code:
-                try:
-                    syntax = Syntax(code, lexer=language, theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                except Exception:
-                    syntax = Syntax(code, lexer="text", theme=CatppuccinMochaPygmentsStyle, word_wrap=True)
-                console.print(syntax)
-            
-            # Renderizar pie del bloque de código
-            print(f'{C_INFO}{"─" * terminal_width}{C_RESET}')
-        else:
-            # Las partes pares (0, 2, 4...) son Markdown normal
-            part_to_render = part.strip('\n')
-            if part_to_render:
-                console.print(Markdown(part_to_render, code_theme=CatppuccinMochaPygmentsStyle))
+    if not content:
+        return
+    target_console.print(Markdown(content, code_theme=CatppuccinMochaPygmentsStyle))
