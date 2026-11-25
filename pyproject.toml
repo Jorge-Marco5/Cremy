@@ -1,5 +1,5 @@
 [project]
-name = "iamarker"
+name = "cremy"
 version = "0.1.0"
 description = "Herramienta CLI para interactuar con la API de Ollama y obtener respuestas en formato Markdown."
 readme = "README.md"
@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.scripts]
-iamarker = "iamarker:main"
+Cremy = "Cremy:main"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14.0"]

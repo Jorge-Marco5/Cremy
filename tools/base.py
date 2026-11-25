@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 
 class BaseTool(ABC):
-    """Clase base abstracta para todas las herramientas de IAMarker."""
+    """Clase base abstracta para todas las herramientas de Cremy."""
 
     name: str = ""
     description: str = ""

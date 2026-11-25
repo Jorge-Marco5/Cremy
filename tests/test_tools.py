@@ -59,10 +59,10 @@ class TestTools(unittest.TestCase):
 
     def test_bash_tool_echo(self):
         tool = BashTool()
-        result = tool.run(command="echo 'iamarker_test'")
+        result = tool.run(command="echo 'Cremy_test'")
         self.assertTrue(result["success"])
         self.assertEqual(result["result"]["exit_code"], 0)
-        self.assertIn("iamarker_test", result["result"]["stdout"])
+        self.assertIn("Cremy_test", result["result"]["stdout"])
 
     def test_registry_schemas_filtering(self):
         cfg = {

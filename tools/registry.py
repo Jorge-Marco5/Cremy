@@ -9,7 +9,7 @@ from tools.definitions import (
 
 
 class ToolRegistry:
-    """Registro central de herramientas disponibles en IAMarker."""
+    """Registro central de herramientas disponibles en Cremy."""
 
     def __init__(self):
         self._tools: Dict[str, BaseTool] = {}

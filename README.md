@@ -1,6 +1,8 @@
-# IAMarker
+# Cremy
 
-IAMarker es una herramienta de línea de comandos (CLI) que te permite interactuar con la API de Ollama. Con ella, puedes realizar consultas a modelos de IA instalados localmente y obtener las respuestas en formato Markdown.
+![banner cremy](./docs/assets/banner.png)
+
+Cremy es una herramienta de línea de comandos (CLI) que te permite interactuar con la API de Ollama. Con ella, puedes realizar consultas a modelos de IA instalados localmente y obtener las respuestas en formato Markdown.
 
 ## Tabla de Contenidos
 
@@ -13,8 +15,8 @@ IAMarker es una herramienta de línea de comandos (CLI) que te permite interactu
 Clonar el repositorio:
 
 ```bash
-git clone https://github.com/Jorge-Marco5/IAMarker.git
-cd IAMarker
+git clone https://github.com/Jorge-Marco5/Cremy.git
+cd Cremy
 ```
 
 ### Opción 1: Usando `uv` (Recomendado)
@@ -30,7 +32,7 @@ Para ejecutar la herramienta con `uv`:
 ```bash
 uv run main.py --help
 # O usando el script del proyecto directamente:
-uv run iamarker --help
+uv run Cremy --help
 # O mediante el script de inicio rápido:
 ./run.sh --help
 ```
@@ -49,7 +51,7 @@ pip install -r requirements.txt
 
 ## Configuracion y uso
 
-> **Nota:** Todos los ejemplos a continuación pueden ejecutarse anteponiendo `uv run` (ej. `uv run main.py <accion>` o `uv run iamarker <accion>`), usando `./run.sh <accion>`, o directamente con `python main.py <accion>` si ya activaste el entorno virtual (`.venv`).
+> **Nota:** Todos los ejemplos a continuación pueden ejecutarse anteponiendo `uv run` (ej. `uv run main.py <accion>` o `uv run Cremy <accion>`), usando `./run.sh <accion>`, o directamente con `python main.py <accion>` si ya activaste el entorno virtual (`.venv`).
 
 - ### Comandos de ayuda general
 

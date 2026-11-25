@@ -1,5 +1,5 @@
 """
-Módulo de tema centralizado para IAMarker basado en la paleta Catppuccin Mocha.
+Módulo de tema centralizado para Cremy basado en la paleta Catppuccin Mocha.
 https://catppuccin.com/palette/#flavor
 """
 

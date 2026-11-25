@@ -1,6 +1,6 @@
-# Sistema de Herramientas (Tools / Function Calling) en IAMarker
+# Sistema de Herramientas (Tools / Function Calling) en Cremy
 
-Este documento describe la arquitectura, el flujo de ejecución, la configuración y el proceso de creación de nuevas herramientas (**Tools**) en **IAMarker**.
+Este documento describe la arquitectura, el flujo de ejecución, la configuración y el proceso de creación de nuevas herramientas (**Tools**) en **Cremy**.
 
 ---
 
@@ -34,13 +34,13 @@ El sistema de herramientas (**Function Calling**) permite que los modelos de len
 
 ## Arquitectura y Flujo de Ejecución (Ciclo ReAct)
 
-Cuando el usuario realiza una consulta mediante `req`, `chat` o `resume`, IAMarker orquesta el ciclo de herramientas a través de `core/chat_service.py`:
+Cuando el usuario realiza una consulta mediante `req`, `chat` o `resume`, Cremy orquesta el ciclo de herramientas a través de `core/chat_service.py`:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Usuario
-    participant CLI as IAMarker (chat_service)
+    participant CLI as Cremy (chat_service)
     participant Registry as ToolRegistry & Config
     participant Ollama as Servidor Ollama (/api/chat)
     participant Tool as Instancia de BaseTool
@@ -88,7 +88,7 @@ sequenceDiagram
 ## Estructura del Proyecto y Responsabilidades
 
 ```text
-IAMarker/
+Cremy/
 ├── tools/
 │   ├── __init__.py           # Exporta BaseTool, ToolRegistry y la instancia singleton registry
 │   ├── base.py               # Clase abstracta BaseTool (esquemas, wrappers y soporte async)
@@ -163,7 +163,7 @@ python main.py toggle_tools
 
 ## Comandos Slash (`/command`) en el Prompt
 
-Además de la invocación automática por el modelo (Function Calling), IAMarker permite **ejecutar herramientas manualmente** directamente desde el prompt en las consultas rápidas (`req`), chats nuevos (`chat`) y chats reanudados (`resume`).
+Además de la invocación automática por el modelo (Function Calling), Cremy permite **ejecutar herramientas manualmente** directamente desde el prompt en las consultas rápidas (`req`), chats nuevos (`chat`) y chats reanudados (`resume`).
 
 ### Sintaxis Soportada:
 1. **Ejecución simple:**
@@ -194,7 +194,7 @@ Además de la invocación automática por el modelo (Function Calling), IAMarker
    - `/exit`: Termina la sesión interactiva.
 
 ### Alias y Escalabilidad:
-Cada herramienta define sus propios alias en su clase (`aliases = [...]`) y su argumento primario (`primary_arg = "..."`). Al registrar cualquier herramienta nueva en `ToolRegistry`, queda disponible de inmediato como comando slash sin necesidad de modificar el código central de IAMarker.
+Cada herramienta define sus propios alias en su clase (`aliases = [...]`) y su argumento primario (`primary_arg = "..."`). Al registrar cualquier herramienta nueva en `ToolRegistry`, queda disponible de inmediato como comando slash sin necesidad de modificar el código central de Cremy.
 
 Al ingresar el primer caracter en el input, abre un autocompletado con la lista completa de todas los comandos y herramientas del sistema listos para usar.
 
@@ -209,7 +209,7 @@ Usuario: /read /ruta/del/archivo/README.md -- Explicame el contenido del README
 
 ## Validación en Tiempo de Ejecución y Seguridad
 
-IAMarker no solo filtra las herramientas al generar los esquemas enviados a Ollama, sino que valida estrictamente cada llamada en el **momento exacto de su ejecución** a través de `registry.execute_tool(...)`:
+Cremy no solo filtra las herramientas al generar los esquemas enviados a Ollama, sino que valida estrictamente cada llamada en el **momento exacto de su ejecución** a través de `registry.execute_tool(...)`:
 
 ### 4 Niveles de Validación en Ejecución:
 1. **Sistema Global Habilitado**: Si el sistema de herramientas fue desactivado globalmente (`toggle_tools`), cualquier invocación es abortada de inmediato.
@@ -242,13 +242,13 @@ En SQLite (`database.db`), la tabla `messages` incluye soporte nativo para el hi
 - **`tool_calls`**: Columna `TEXT` que almacena el JSON con las llamadas generadas por el modelo en ese turno.
 - **`content`**: Contiene el texto de respuesta o el resultado serializado de la herramienta.
 
-Al reanudar una sesión previa con `python main.py resume`, IAMarker reconstruye tanto las llamadas como los resultados de herramientas para preservar el contexto completo ante Ollama.
+Al reanudar una sesión previa con `python main.py resume`, Cremy reconstruye tanto las llamadas como los resultados de herramientas para preservar el contexto completo ante Ollama.
 
 ---
 
 ## Guía: Cómo Crear una Nueva Herramienta
 
-En IAMarker puedes crear herramientas bajo dos modalidades según tu objetivo:
+En Cremy puedes crear herramientas bajo dos modalidades según tu objetivo:
 - **Herramientas Oficiales (Built-in)**: Se versionan en Git y forman parte de las herramientas preinstaladas para todos los usuarios.
 - **Herramientas Personales (Locales / Privadas)**: Para tu uso particular, sin que se suban al repositorio de GitHub ni afecten a otros usuarios.
 
@@ -382,7 +382,7 @@ Para mantener herramientas de uso privado sin que Git las rastree ni suba tus ar
 
 ### Paso 3: Verificar en la CLI
 
-Una vez registrada (sea oficial o personal), IAMarker la incorporará inmediatamente al catálogo:
+Una vez registrada (sea oficial o personal), Cremy la incorporará inmediatamente al catálogo:
 
 ```bash
 # Ver en la tabla con su estado
