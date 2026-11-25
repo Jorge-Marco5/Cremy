@@ -34,6 +34,7 @@ from gui.theme import (
     C_WARNING,
     QUESTIONARY_MOCHA_STYLE,
     console,
+    ansi_hex
 )
 
 
@@ -409,47 +410,46 @@ def show_models(args):
 
     except urllib.error.HTTPError as e:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}\nError HTTP del servidor ({e.code}): {e.reason}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Verifica que la URL del servidor Ollama sea correcta: {Fore.CYAN}{url_base}{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}\nError HTTP del servidor ({e.code}): {e.reason}{Style.RESET_ALL}")
+        print(f"{C_WARNING}Verifica que la URL del servidor Ollama sea correcta: {C_USER}{url_base}{Style.RESET_ALL}")
         return 1
     except urllib.error.URLError as e:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}\nError de conexión con Ollama: {e.reason}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}No se pudo contactar al servidor en: {Fore.CYAN}{url_base}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Verifica que el servicio esté corriendo con: {Fore.CYAN}ollama serve{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}O cambia la URL configurada con: {Fore.CYAN}python main.py change_server -u <url>{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}\nError de conexión con Ollama: {e.reason}{Style.RESET_ALL}")
+        print(f"{C_WARNING}No se pudo contactar al servidor en: {C_USER}{url_base}{Style.RESET_ALL}")
+        print(f"{C_WARNING}Verifica que el servicio esté corriendo con: {C_USER}ollama serve{Style.RESET_ALL}")
+        print(f"{C_WARNING}O cambia la URL configurada con: {C_USER}python main.py change_server -u <url>{Style.RESET_ALL}")
         return 1
     except TimeoutError:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}\nTiempo de espera agotado al conectar con Ollama en {url_base}.{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}\nTiempo de espera agotado al conectar con Ollama en {url_base}.{Style.RESET_ALL}")
         return 1
     except json.JSONDecodeError:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}\nError: La respuesta del servidor no es un JSON válido.{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}\nError: La respuesta del servidor no es un JSON válido.{Style.RESET_ALL}")
         return 1
     except Exception as e:
         spinner.stop()
-        print(f"{Fore.RED}{Style.BRIGHT}\nError inesperado: {e}{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}\nError inesperado: {e}{Style.RESET_ALL}")
         return 1
 
 def change_models(args):
-    if not args.model:
-        print(f"\nModelo actual: {get_config("model")}\n")
-        print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa el nombre del modelo. Consulta con 'models' para ver los disponibles.{Style.RESET_ALL}")
-        return 1
 
+    print(f"\n{ansi_hex(CatppuccinMocha.GREEN)}Modelo actual: {ansi_hex(CatppuccinMocha.SAPPHIRE)}{get_config("model")}\n{C_RESET}")
     models = get_config("models")
     if not models:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No tienes modelos guardados en la configuración. Consulta con 'models' primero.{Style.RESET_ALL}")
+        print(f"{C_WARNING}{Style.BRIGHT}No tienes modelos guardados en la configuración. Consulta con 'models' primero.{Style.RESET_ALL}")
         return 1
+    
+    model = questionary.select("Selecciona un modelo de IA:", choices=models).ask()
 
-    if args.model not in models:
+    if model not in models:
         show_models(args)
-        print(f"{Fore.RED}{Style.BRIGHT}\nModelo '{args.model}' no encontrado, verifica el nombre.{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}\nModelo '{model}' no encontrado, verifica el nombre.{Style.RESET_ALL}")
         return 1
 
-    write_config("model", args.model)
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nModelo default cambiado exitosamente a: {get_config('model')}{Style.RESET_ALL}")
+    write_config("model", model)
+    print(f"{ansi_hex(CatppuccinMocha.GREEN, True)}\nModelo default cambiado exitosamente a: {ansi_hex(CatppuccinMocha.SAPPHIRE)}{get_config('model')}{Style.RESET_ALL}")
     return 0
 
 def save_usage(model, tokens, duration):
@@ -457,104 +457,104 @@ def save_usage(model, tokens, duration):
     return _save(model, tokens, duration)
 
 def show_usage(args):
-    spinner = Halo(text=f'{Fore.CYAN}Obteniendo modelos...{Style.RESET_ALL}', spinner='dots')
+    spinner = Halo(text=f'{C_USER}Obteniendo modelos...{Style.RESET_ALL}', spinner='dots')
     spinner.start()
     usage = get_config("usage")
     if not usage:
         spinner.stop()
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No hay estadísticas de uso disponibles.")
+        print(f"{C_WARNING}{Style.BRIGHT}No hay estadísticas de uso disponibles.")
         return
     if not args.model:
         spinner.stop()
         usage = dict(sorted(usage.items(), key=lambda item: item[1]['tokens'], reverse=True))
         for model, data in usage.items():
-            print(f"{Fore.GREEN}{Style.BRIGHT}\n• {model}:")
-            print(f"{Fore.CYAN}     Tokens totales: {Style.RESET_ALL}{data['tokens']}")
-            print(f"{Fore.CYAN}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(data['duration'])}")
+            print(f"{C_SUCCESS}\n• {model}:")
+            print(f"{C_USER}     Tokens totales: {Style.RESET_ALL}{data['tokens']}")
+            print(f"{C_USER}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(data['duration'])}")
         return
 
     if args.model not in usage:
         spinner.stop()
-        print(f"{Fore.YELLOW}{Style.BRIGHT}No hay estadísticas de uso para el modelo '{args.model}'.")
+        print(f"{C_WARNING}{Style.BRIGHT}No hay estadísticas de uso para el modelo '{args.model}'.")
         return
     spinner.stop()
-    print(f"{Fore.GREEN}{Style.BRIGHT}\n• {args.model}:")
-    print(f"{Fore.CYAN}     Tokens totales: {Style.RESET_ALL}{usage[args.model]['tokens']}")
-    print(f"{Fore.CYAN}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(usage[args.model]['duration'])}")
+    print(f"{C_SUCCESS}\n• {args.model}:")
+    print(f"{C_USER}     Tokens totales: {Style.RESET_ALL}{usage[args.model]['tokens']}")
+    print(f"{C_USER}     Tiempo de actividad: {Style.RESET_ALL}{format_duration(usage[args.model]['duration'])}")
     print("\n")
 
 def change_host(args):
     try:
         if not args.url:
             print(f"\nHost actual: {get_config("url")}\n")
-            print(f"{Fore.YELLOW}{Style.BRIGHT}Ingresa la URL del host.{Style.RESET_ALL}")
+            print(f"{C_WARNING}{Style.BRIGHT}Ingresa la URL del host.{Style.RESET_ALL}")
             return 1
 
         write_config("url", args.url)
-        print(f"{Fore.GREEN}{Style.BRIGHT}\nURL del host cambiada exitosamente a: {get_config('url')}{Style.RESET_ALL}")
+        print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nURL del host cambiada exitosamente a: {get_config('url')}{Style.RESET_ALL}")
         return 0
     except Exception as e:
-        print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar la URL del host: {e}{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}Error al cambiar la URL del host: {e}{Style.RESET_ALL}")
 
 def system_prompt(args):
     try:
         if not args.text:
-            print(f"\nSystem prompt actual: {get_config("system_prompt")}\n")
-            print(f"{Fore.YELLOW}{Style.BRIGHT}No se ingreso un nuevo system prompt.{Style.RESET_ALL}")
+            print(f"\n{ansi_hex(CatppuccinMocha.GREEN)}System prompt actual: {ansi_hex(CatppuccinMocha.SAPPHIRE)}{get_config("system_prompt")}\n")
+            print(f"{C_WARNING}{Style.BRIGHT}No se ingreso un nuevo system prompt.{Style.RESET_ALL}")
             return 1
         write_config("system_prompt", args.text)
-        print(f"{Fore.GREEN}{Style.BRIGHT}\nSystem prompt cambiado exitosamente.{Style.RESET_ALL}")
+        print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nSystem prompt cambiado exitosamente.{Style.RESET_ALL}")
         return 0
     except Exception as e:
-        print(f"{Fore.RED}{Style.BRIGHT}Error al cambiar el system prompt: {e}{Style.RESET_ALL}")
+        print(f"{C_ERROR}{Style.BRIGHT}Error al cambiar el system prompt: {e}{Style.RESET_ALL}")
         return 1
 
 def show_options(args):
     options = get_config("options") or {}
-    print(f"{Fore.MAGENTA}{Style.BRIGHT}\nParámetros de opciones configurados:{Style.RESET_ALL}")
+    print(f"{C_ASSISTANT}\nParámetros de opciones configurados:{Style.RESET_ALL}")
     if not options:
-        print(f"{Fore.YELLOW}  (Ninguna opción personalizada configurada. Se usan los valores por defecto del modelo en Ollama){Style.RESET_ALL}")
+        print(f"{C_WARNING}  (Ninguna opción personalizada configurada. Se usan los valores por defecto del modelo en Ollama){Style.RESET_ALL}")
     else:
         for key, val in options.items():
-            print(f"{Fore.CYAN}  • {key}: {Fore.GREEN}{val} {Fore.WHITE}({type(val).__name__}){Style.RESET_ALL}")
+            print(f"{C_USER}  • {key}: {Fore.GREEN}{val} {Fore.WHITE}({type(val).__name__}){Style.RESET_ALL}")
 
-    print(f"{Fore.MAGENTA}{Style.BRIGHT}\nOpciones comunes soportadas por Ollama:{Style.RESET_ALL}")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}temperature{Style.RESET_ALL} (float): Creatividad / aleatoriedad (ej. 0.2 factual, 0.7 balanceado, 1.2 creativo)")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}num_ctx{Style.RESET_ALL} (int): Tamaño de ventana de contexto en tokens (ej. 2048, 4096, 8192, 32768)")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}top_p{Style.RESET_ALL} (float): Muestreo por núcleo (ej. 0.9)")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}top_k{Style.RESET_ALL} (int): Limita a los K tokens más probables (ej. 40)")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}num_predict{Style.RESET_ALL} (int): Máximo de tokens a generar (-1 para ilimitado)")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}repeat_penalty{Style.RESET_ALL} (float): Penalización por repetición (ej. 1.1)")
-    print(f"{Fore.WHITE}  • {Fore.CYAN}seed{Style.RESET_ALL} (int): Semilla para reproducibilidad de respuestas")
-    print(f"\n{Fore.YELLOW}Tip: Modifica una opción con {Fore.CYAN}python main.py set_option -k <clave> -v <valor>{Style.RESET_ALL}")
+    print(f"{C_ASSISTANT}\nOpciones comunes soportadas por Ollama:{ansi_hex(CatppuccinMocha.TEXT)}")
+    print(f"{Fore.WHITE}  • {C_USER}temperature{ansi_hex(CatppuccinMocha.TEXT)} (float): Creatividad / aleatoriedad (ej. 0.2 factual, 0.7 balanceado, 1.2 creativo)")
+    print(f"{Fore.WHITE}  • {C_USER}num_ctx{ansi_hex(CatppuccinMocha.TEXT)} (int): Tamaño de ventana de contexto en tokens (ej. 2048, 4096, 8192, 32768)")
+    print(f"{Fore.WHITE}  • {C_USER}top_p{ansi_hex(CatppuccinMocha.TEXT)} (float): Muestreo por núcleo (ej. 0.9)")
+    print(f"{Fore.WHITE}  • {C_USER}top_k{ansi_hex(CatppuccinMocha.TEXT)} (int): Limita a los K tokens más probables (ej. 40)")
+    print(f"{Fore.WHITE}  • {C_USER}num_predict{ansi_hex(CatppuccinMocha.TEXT)} (int): Máximo de tokens a generar (-1 para ilimitado)")
+    print(f"{Fore.WHITE}  • {C_USER}repeat_penalty{ansi_hex(CatppuccinMocha.TEXT)} (float): Penalización por repetición (ej. 1.1)")
+    print(f"{Fore.WHITE}  • {C_USER}seed{ansi_hex(CatppuccinMocha.TEXT)} (int): Semilla para reproducibilidad de respuestas")
+    print(f"\n{C_WARNING}Tip: Modifica una opción con {C_USER}python main.py set_option -k <clave> -v <valor>{Style.RESET_ALL}")
     return 0
 
 def set_option(args):
     if not args.key or args.value is None:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}Uso requerido: set_option -k <clave> -v <valor>{Style.RESET_ALL}")
+        print(f"{C_WARNING}{Style.BRIGHT}Uso requerido: set_option -k <clave> -v <valor>{Style.RESET_ALL}")
         return 1
 
     options = get_config("options") or {}
     parsed_value = parse_option_value(args.value)
     options[args.key] = parsed_value
     write_config("options", options)
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nOpción configurada exitosamente:{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}  • {args.key}: {Fore.GREEN}{parsed_value} {Fore.WHITE}({type(parsed_value).__name__}){Style.RESET_ALL}")
+    print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nOpción configurada exitosamente:{Style.RESET_ALL}")
+    print(f"{C_USER}  • {args.key}: {Fore.GREEN}{parsed_value} {Fore.WHITE}({type(parsed_value).__name__}){Style.RESET_ALL}")
     return 0
 
 def reset_options(args):
     write_config("options", {})
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nOpciones restablecidas exitosamente. Ahora se usan los valores por defecto de Ollama.{Style.RESET_ALL}")
+    print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nOpciones restablecidas exitosamente. Ahora se usan los valores por defecto de Ollama.{Style.RESET_ALL}")
     return 0
 
 def think_handler(args):
     think_enabled = get_config("think")
     if think_enabled:
         write_config("think", False)
-        print(f"{Fore.GREEN}{Style.BRIGHT}\nModo razonamiento desactivado exitosamente.{Style.RESET_ALL}")
+        print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nModo razonamiento desactivado exitosamente.{Style.RESET_ALL}")
     else:
         write_config("think", True)
-        print(f"{Fore.GREEN}{Style.BRIGHT}\nModo razonamiento activado exitosamente.{Style.RESET_ALL}")
+        print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nModo razonamiento activado exitosamente.{Style.RESET_ALL}")
     return 0
 
 def show_tools(args):
@@ -609,11 +609,11 @@ def enable_tool(args):
 
     tool_name = args.tool.strip()
     if not registry.get_tool(tool_name):
-        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
+        print(f"{C_ERROR}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
         return 1
 
     update_tool_setting(tool_name, enabled=True)
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nHerramienta '{tool_name}' activada exitosamente.{Style.RESET_ALL}")
+    print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nHerramienta '{tool_name}' activada exitosamente.{Style.RESET_ALL}")
     return 0
 
 def disable_tool(args):
@@ -623,11 +623,11 @@ def disable_tool(args):
 
     tool_name = args.tool.strip()
     if not registry.get_tool(tool_name):
-        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
+        print(f"{C_ERROR}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
         return 1
 
     update_tool_setting(tool_name, enabled=False)
-    print(f"{Fore.YELLOW}{Style.BRIGHT}\nHerramienta '{tool_name}' desactivada exitosamente.{Style.RESET_ALL}")
+    print(f"{C_WARNING}{Style.BRIGHT}\nHerramienta '{tool_name}' desactivada exitosamente.{Style.RESET_ALL}")
     return 0
 
 def set_tool_confirmation(args):
@@ -637,17 +637,17 @@ def set_tool_confirmation(args):
 
     tool_name = args.tool.strip()
     if not registry.get_tool(tool_name):
-        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
+        print(f"{C_ERROR}{Style.BRIGHT}Error:{Style.RESET_ALL} La herramienta '{tool_name}' no existe en el catálogo.")
         return 1
 
     parsed_val = parse_option_value(args.value)
     if not isinstance(parsed_val, bool):
-        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} El valor debe ser 'true' o 'false'.")
+        print(f"{C_ERROR}{Style.BRIGHT}Error:{Style.RESET_ALL} El valor debe ser 'true' o 'false'.")
         return 1
 
     update_tool_setting(tool_name, require_confirmation=parsed_val)
     mode_str = "requerirá confirmación del usuario" if parsed_val else "se ejecutará automáticamente sin confirmación"
-    print(f"{Fore.GREEN}{Style.BRIGHT}\nConfiguración actualizada:{Style.RESET_ALL} La herramienta '{tool_name}' {mode_str}.")
+    print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nConfiguración actualizada:{Style.RESET_ALL} La herramienta '{tool_name}' {mode_str}.")
     return 0
 
 def toggle_tools_handler(args):
@@ -656,7 +656,7 @@ def toggle_tools_handler(args):
 
     new_state = toggle_tools_global()
     if new_state:
-        print(f"{Fore.GREEN}{Style.BRIGHT}\nSistema de herramientas activado globalmente.{Style.RESET_ALL}")
+        print(f"{ansi_hex(CatppuccinMocha.GREEN)}\nSistema de herramientas activado globalmente.{Style.RESET_ALL}")
     else:
-        print(f"{Fore.YELLOW}{Style.BRIGHT}\nSistema de herramientas desactivado globalmente.{Style.RESET_ALL}")
+        print(f"{C_WARNING}{Style.BRIGHT}\nSistema de herramientas desactivado globalmente.{Style.RESET_ALL}")
     return 0
