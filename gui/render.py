@@ -8,6 +8,7 @@ from rich.console import Console, Group
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.segment import Segment
 from rich.syntax import Syntax
 from rich.text import Text
 
@@ -99,6 +100,64 @@ def render_banner(args=""):
     print("\n" + "\n".join(banner_lines) + "\n" + palette_line)
 
 
+class _TailRenderable:
+    """Limita un renderable a sus últimas N líneas físicas para evitar desbordar el viewport en Rich Live."""
+
+    def __init__(self, renderable: Any, max_lines: Optional[int] = None):
+        self.renderable = renderable
+        self.max_lines = max_lines
+
+    def __rich_console__(self, target_console: Console, options):
+        lines = target_console.render_lines(self.renderable, options, pad=False)
+        limit = self.max_lines
+        if limit is None:
+            limit = max(4, target_console.size.height - 4)
+        if limit > 0 and len(lines) > limit:
+            lines = lines[-limit:]
+        for line in lines:
+            yield from line
+            yield Segment.line()
+
+
+def _build_thinking_panel(
+    thinking_text: str,
+    is_thinking: bool = False,
+    max_lines: Optional[int] = None,
+) -> Panel:
+    """Construye el panel de razonamiento, opcionalmente acotado en altura durante streaming."""
+    title = (
+        f"[italic {CatppuccinMocha.MAUVE}]Pensando...[/]"
+        if is_thinking
+        else f"[italic {CatppuccinMocha.OVERLAY1}]Razonamiento[/]"
+    )
+    body: Any = Text(thinking_text.strip(), style=f"italic {CatppuccinMocha.OVERLAY1}")
+    subtitle = None
+    if max_lines is not None:
+        body = _TailRenderable(body, max_lines=max_lines)
+        subtitle = f"[{CatppuccinMocha.OVERLAY0}]se mostrará completo al finalizar[/]"
+
+    return Panel(
+        body,
+        title=title,
+        title_align="left",
+        subtitle=subtitle,
+        subtitle_align="right",
+        border_style=CatppuccinMocha.SURFACE2,
+        padding=(0, 1),
+    )
+
+
+def _build_content_markdown(
+    content_text: str,
+    max_lines: Optional[int] = None,
+) -> Any:
+    """Construye el Markdown de respuesta, opcionalmente acotado en altura durante streaming."""
+    md = Markdown(content_text, code_theme=CatppuccinMochaPygmentsStyle)
+    if max_lines is not None:
+        return _TailRenderable(md, max_lines=max_lines)
+    return md
+
+
 def _build_response_renderable(
     thinking_text: str,
     content_text: str,
@@ -108,24 +167,10 @@ def _build_response_renderable(
     renderables = []
 
     if thinking_text:
-        title = (
-            f"[italic {CatppuccinMocha.MAUVE}]Pensando...[/]"
-            if is_thinking
-            else f"[italic {CatppuccinMocha.OVERLAY1}]Razonamiento[/]"
-        )
-        thinking_panel = Panel(
-            Text(thinking_text.strip(), style=f"italic {CatppuccinMocha.OVERLAY1}"),
-            title=title,
-            title_align="left",
-            border_style=CatppuccinMocha.SURFACE2,
-            padding=(0, 1),
-        )
-        renderables.append(thinking_panel)
+        renderables.append(_build_thinking_panel(thinking_text, is_thinking=is_thinking))
 
     if content_text:
-        renderables.append(
-            Markdown(content_text, code_theme=CatppuccinMochaPygmentsStyle)
-        )
+        renderables.append(_build_content_markdown(content_text))
 
     return Group(*renderables)
 
@@ -138,6 +183,8 @@ def render_event_stream(
 ) -> Tuple[str, List[Dict[str, Any]], int, int]:
     """
     Consume eventos tipados de Ollama y los renderiza usando Rich.
+    En modo streaming acota la vista en vivo al viewport del terminal (transient=True)
+    y confirma cada fase completa una sola vez para evitar duplicados en el scrollback.
     Retorna (full_response_content, tool_calls, tokens, duration).
     """
     thinking_text = ""
@@ -155,39 +202,79 @@ def render_event_stream(
 
     if stream:
         live: Optional[Live] = None
+        active_phase: Optional[str] = None
+        thinking_committed = False
+        content_committed = False
+
+        def _stop_live():
+            nonlocal live, active_phase
+            if live is not None:
+                live.stop()
+                live = None
+            active_phase = None
+
+        def _commit_thinking():
+            nonlocal thinking_committed
+            if active_phase == "thinking":
+                _stop_live()
+            if thinking_text and not thinking_committed:
+                target_console.print(
+                    _build_thinking_panel(thinking_text, is_thinking=False)
+                )
+                thinking_committed = True
+
+        def _commit_content():
+            nonlocal content_committed
+            if active_phase == "content":
+                _stop_live()
+            if full_response_content and not content_committed:
+                target_console.print(_build_content_markdown(full_response_content))
+                content_committed = True
+
         try:
             for event in events:
                 if event.kind == "thinking":
                     _stop_spinner()
                     thinking_text += event.text
-                    renderable = _build_response_renderable(
-                        thinking_text, full_response_content, is_thinking=True
+                    max_thinking_lines = max(3, target_console.size.height - 6)
+                    renderable = _build_thinking_panel(
+                        thinking_text,
+                        is_thinking=True,
+                        max_lines=max_thinking_lines,
                     )
                     if live is None:
                         live = Live(
                             renderable,
                             console=target_console,
-                            refresh_per_second=12,
-                            vertical_overflow="visible",
+                            refresh_per_second=10,
+                            transient=True,
+                            vertical_overflow="crop",
                         )
                         live.start()
+                        active_phase = "thinking"
                     else:
                         live.update(renderable)
 
                 elif event.kind == "content":
                     _stop_spinner()
+                    if active_phase == "thinking":
+                        _commit_thinking()
                     full_response_content += event.text
-                    renderable = _build_response_renderable(
-                        thinking_text, full_response_content, is_thinking=False
+                    max_content_lines = max(4, target_console.size.height - 4)
+                    renderable = _build_content_markdown(
+                        full_response_content,
+                        max_lines=max_content_lines,
                     )
                     if live is None:
                         live = Live(
                             renderable,
                             console=target_console,
-                            refresh_per_second=12,
-                            vertical_overflow="visible",
+                            refresh_per_second=10,
+                            transient=True,
+                            vertical_overflow="crop",
                         )
                         live.start()
+                        active_phase = "content"
                     else:
                         live.update(renderable)
 
@@ -199,18 +286,11 @@ def render_event_stream(
                     _stop_spinner()
                     tokens = event.eval_count
                     duration = event.eval_duration
-
-            if live is not None:
-                live.update(
-                    _build_response_renderable(
-                        thinking_text, full_response_content, is_thinking=False
-                    ),
-                    refresh=True,
-                )
         finally:
-            if live is not None:
-                live.stop()
+            _stop_live()
             _stop_spinner()
+            _commit_thinking()
+            _commit_content()
     else:
         try:
             for event in events:

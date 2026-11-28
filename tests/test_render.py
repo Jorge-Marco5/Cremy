@@ -9,6 +9,7 @@ from rich.console import Console
 
 from core.ollama_client import StreamEvent, iter_ollama_events
 from gui.render import (
+    _TailRenderable,
     render_conversation,
     render_event_stream,
     render_response,
@@ -223,6 +224,44 @@ class TestRenderModule(unittest.TestCase):
         self.assertIn("Hola mundo", rich_out)
         self.assertIn("Calculando...", rich_out)
         self.assertIn('"result": 4', rich_out)
+
+    def test_tail_renderable_clamps_to_max_lines(self):
+        from rich.text import Text
+
+        test_console, _ = _make_test_console()
+        long_text = "\n".join(f"linea-{i}" for i in range(1, 51))
+        tail = _TailRenderable(Text(long_text), max_lines=5)
+        rendered_lines = test_console.render_lines(tail, pad=False)
+
+        self.assertEqual(len(rendered_lines), 5)
+        joined = "\n".join("".join(seg.text for seg in line) for line in rendered_lines)
+        self.assertNotIn("linea-1\n", joined)
+        self.assertIn("linea-46", joined)
+        self.assertIn("linea-50", joined)
+
+    def test_render_event_stream_long_thinking_and_content_committed_once_without_overflow(self):
+        buf = io.StringIO()
+        small_console = Console(file=buf, force_terminal=False, width=80, height=12, color_system=None)
+        events = [
+            StreamEvent(kind="thinking", text="\n".join(f"paso-{i}" for i in range(1, 31))),
+            StreamEvent(kind="content", text="\n".join(f"- item-{i}" for i in range(1, 31))),
+            StreamEvent(kind="done", eval_count=100, eval_duration=1000),
+        ]
+
+        content, _, tokens, _ = render_event_stream(
+            events, stream=True, target_console=small_console
+        )
+
+        output = buf.getvalue()
+        self.assertEqual(tokens, 100)
+        self.assertIn("item-1", content)
+        self.assertIn("item-30", content)
+        # Al finalizar, el razonamiento completo y la respuesta completa se imprimen íntegros
+        self.assertIn("Razonamiento", output)
+        self.assertIn("paso-1", output)
+        self.assertIn("paso-30", output)
+        self.assertIn("item-1", output)
+        self.assertIn("item-30", output)
 
 
 if __name__ == "__main__":
